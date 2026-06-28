@@ -12,10 +12,16 @@ steps:
       - kimi_web_1
     prompt: generate
   - key: review
-    provider: gemini_api_1
+    providers:
+      - gemini_api_1
+      - openai_api_1
+      - anthropic_api_1
     prompt: review
   - key: deep_analyze
-    provider: claude_web_1
+    providers:
+      - gemini_api_1
+      - openai_api_1
+      - claude_web_1
     prompt: deep_analyze
   - key: improve
     providers:
@@ -24,5 +30,8 @@ steps:
       - chatgpt_web_1
     prompt: improve
   - key: summary
-    provider: gemini_api_1
+    providers:
+      - gemini_api_1
+      - openai_api_1
+      - anthropic_api_1
     prompt: summary

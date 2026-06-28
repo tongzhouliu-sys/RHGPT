@@ -283,15 +283,17 @@ def create_app(
         if isinstance(selected, list) and len(selected) > 0:
             import yaml
             dyn_path = os.path.join(session_dir, "pipeline.yaml")
+            steps_list = []
+            for key in ["generate", "review", "deep_analyze", "improve", "summary"]:
+                step_obj = {"key": key, "prompt": key}
+                if len(selected) > 1:
+                    step_obj["providers"] = selected
+                else:
+                    step_obj["provider"] = selected[0]
+                steps_list.append(step_obj)
             dyn_cfg = {
                 "name": "Custom Selected Relay",
-                "steps": [
-                    {"key": "generate", "providers": selected, "prompt": "generate"},
-                    {"key": "review", "provider": selected[0], "prompt": "review"},
-                    {"key": "deep_analyze", "provider": selected[1] if len(selected) > 1 else selected[0], "prompt": "deep_analyze"},
-                    {"key": "improve", "providers": selected, "prompt": "improve"},
-                    {"key": "summary", "provider": selected[0], "prompt": "summary"},
-                ]
+                "steps": steps_list,
             }
             with open(dyn_path, "w", encoding="utf-8") as f:
                 yaml.safe_dump(dyn_cfg, f)

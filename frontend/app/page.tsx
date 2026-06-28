@@ -24,6 +24,8 @@ interface NodeState {
   status: NodeStatus;
   content?: string;
   error?: { type: string; message: string };
+  runnerups?: Record<string, string>;
+  runnerupTyping?: Record<string, boolean>;
 }
 
 const PIPELINES = [
@@ -34,17 +36,17 @@ const PIPELINES = [
 ];
 
 const AVAILABLE_MODELS = [
-  { id: "openai_api_1", label: "OpenAI 直连/中转 API", provider: "openai_api", api: true },
-  { id: "gemini_api_1", label: "Gemini 官方 API", provider: "gemini_api", api: true },
-  { id: "anthropic_api_1", label: "Anthropic 直连 API", provider: "anthropic_api", api: true },
-  { id: "qwen_api_1", label: "通义千问 Qwen API", provider: "qwen_api", api: true },
-  { id: "chatgpt_web_1", label: "ChatGPT Web 网页", provider: "chatgpt", api: false },
-  { id: "claude_web_1", label: "Claude Web 网页", provider: "claude", api: false },
-  { id: "kimi_web_1", label: "Kimi Web 网页", provider: "kimi", api: false },
-  { id: "deepseek_web_1", label: "DeepSeek Web 网页", provider: "deepseek", api: false },
-  { id: "zai_web_1", label: "智谱清言 Z.AI Web 网页", provider: "zai", api: false },
-  { id: "qwen_web_1", label: "Qwen 国际版 Web (chat.qwen.ai)", provider: "qwen", api: false },
-  { id: "gemini_web_1", label: "Gemini Web 网页 (gemini.google.com)", provider: "gemini", api: false },
+  { id: "openai_api_1", label: "OpenAI API", provider: "openai_api", api: true },
+  { id: "gemini_api_1", label: "Gemini API", provider: "gemini_api", api: true },
+  { id: "anthropic_api_1", label: "Anthropic API", provider: "anthropic_api", api: true },
+  { id: "qwen_api_1", label: "Qwen API", provider: "qwen_api", api: true },
+  { id: "chatgpt_web_1", label: "ChatGPT Web", provider: "chatgpt", api: false },
+  { id: "claude_web_1", label: "Claude Web", provider: "claude", api: false },
+  { id: "kimi_web_1", label: "Kimi Web", provider: "kimi", api: false },
+  { id: "deepseek_web_1", label: "DeepSeek Web", provider: "deepseek", api: false },
+  { id: "zai_web_1", label: "Z.AI 智谱 Web", provider: "zai", api: false },
+  { id: "qwen_web_1", label: "Qwen 国际版 Web", provider: "qwen", api: false },
+  { id: "gemini_web_1", label: "Gemini Web", provider: "gemini", api: false },
 ];
 
 const BADGE: Record<NodeStatus, string> = {
@@ -131,6 +133,17 @@ export default function Page() {
       setPhase("error");
       return;
     }
+    if (ev.type === "step_transitioning") {
+      // Pre-create the next step node as "running" with transition hint
+      const nextKey = ev.key;
+      if (!nextKey) return;
+      setOrder((prev) => (prev.includes(nextKey) ? prev : [...prev, nextKey]));
+      setNodes((prev) => ({
+        ...prev,
+        [nextKey]: { key: nextKey, status: "running" as NodeStatus, content: "🔄 正在切换到下一步骤，多模型竞速即将启动...\n" },
+      }));
+      return;
+    }
     const key = ev.key;
     if (!key) return;
     setOrder((prev) => (prev.includes(key) ? prev : [...prev, key]));
@@ -138,16 +151,40 @@ export default function Page() {
       const next = { ...prev };
       const cur = next[key] ?? { key, status: "running" as NodeStatus };
       if (ev.provider) cur.provider = ev.provider;
-      if (ev.type === "step_started") cur.status = "running";
-      else if (ev.type === "step_chunk") {
+      if (ev.type === "step_started") {
         cur.status = "running";
-        cur.content = (cur.content || "") + (ev.delta || "");
+      } else if (ev.type === "step_chunk") {
+        cur.status = "running";
+        let text = cur.content || "";
+        // Clear warmup/transition placeholders on first real chunk
+        if (text.startsWith("⚡ 正在同时拉起") || text.startsWith("🔄 正在切换")) {
+          text = "";
+        }
+        cur.content = text + (ev.delta || "");
       } else if (ev.type === "step_succeeded") {
         cur.status = "succeeded";
-        cur.content = ev.content ?? cur.content ?? "";
+        let text = ev.content ?? cur.content ?? "";
+        if (text.startsWith("⚡ 正在同时拉起") || text.startsWith("🔄 正在切换")) text = "";
+        cur.content = text;
       } else if (ev.type === "step_failed") {
         cur.status = "failed";
         cur.error = ev.error;
+      } else if (ev.type === "runnerup_chunk" && ev.provider) {
+        const r = { ...(cur.runnerups || {}) };
+        r[ev.provider] = (r[ev.provider] || "") + (ev.delta || "");
+        cur.runnerups = r;
+        // Track which runnerups are still typing
+        const rt = { ...(cur.runnerupTyping || {}) };
+        rt[ev.provider] = true;
+        cur.runnerupTyping = rt;
+      } else if (ev.type === "runnerup_succeeded" && ev.provider) {
+        const r = { ...(cur.runnerups || {}) };
+        r[ev.provider] = ev.content ?? r[ev.provider] ?? "";
+        cur.runnerups = r;
+        // Mark this runnerup as done typing
+        const rt = { ...(cur.runnerupTyping || {}) };
+        rt[ev.provider] = false;
+        cur.runnerupTyping = rt;
       }
       next[key] = { ...cur };
       return next;
@@ -426,7 +463,7 @@ export default function Page() {
 
             {running && (
               <div className="progress-tips-row">
-                <span>💡 协同交互提示：多模型接力共分 5 步（生成→评审→拆解→优化→总结），当上一轮模型打字完成后，将自动开启下一轮大模型接力。</span>
+                <span>💡 ⚡ 全步骤并发竞速中：选中的模型在每一轮均同时赛马，谁最快首 Token 吐字谁锁定获胜，并实时秒级刷屏！</span>
               </div>
             )}
           </div>
@@ -436,6 +473,10 @@ export default function Page() {
               const n = nodes[key];
               const isLast = idx === order.length - 1;
               const open = expandedKeys[key] !== undefined ? expandedKeys[key] : isLast;
+              const hasRunnerups = n.runnerups && Object.keys(n.runnerups).length > 0;
+              const isWinnerTyping = n.status === "running" && n.content && !n.content.startsWith("⚡") && !n.content.startsWith("🔄");
+              const isTransitioning = n.status === "running" && n.content && n.content.startsWith("🔄");
+
               return (
                 <div key={key} className={`node ${n.status}`}>
                   <div className={`card ${n.status} ${open ? "open" : ""}`}>
@@ -445,23 +486,89 @@ export default function Page() {
                       style={{ cursor: "pointer", userSelect: "none" }}
                       title="点击展开/折叠该模型回答"
                     >
-                      <span className="key">{key}</span>
+                      <span className="key">{STEP_LABELS[key] || key}</span>
                       {n.provider && (
                         <div className="provider-tag">
                           <AgentLogo provider={n.provider} size={16} />
                           <span>{n.provider}</span>
                         </div>
                       )}
-                      <span className="badge">{BADGE[n.status]}</span>
-                      <span style={{ fontSize: "12px", color: "var(--muted)", marginLeft: "8px", fontFamily: "var(--mono)" }}>
-                        {open ? "▲ 折叠" : "▼ 展开答案"}
+                      {n.status === "succeeded" && n.provider && hasRunnerups && (
+                        <span className="winner-crown">🏆 最快</span>
+                      )}
+                      <span className="badge">
+                        {n.status === "running" && isWinnerTyping ? "打字中..." : BADGE[n.status]}
+                      </span>
+                      {hasRunnerups && (
+                        <span style={{ fontSize: "11px", color: "var(--accent)", fontFamily: "var(--mono)", fontWeight: 600 }}>
+                          +{Object.keys(n.runnerups!).length} 个模型方案
+                        </span>
+                      )}
+                      <span style={{ fontSize: "12px", color: "var(--muted)", marginLeft: "4px", fontFamily: "var(--mono)" }}>
+                        {open ? "▲" : "▼"}
                       </span>
                     </div>
-                    {open && (n.status === "succeeded" || (n.status === "running" && n.content)) && (
+
+                    {/* Step transition animation */}
+                    {open && isTransitioning && (
                       <div className="body">
-                        <div className="md" dangerouslySetInnerHTML={{ __html: renderMarkdown(n.content || "") }} />
+                        <div className="step-transition-card">
+                          <div className="step-transition-spinner" />
+                          <span>{n.content}</span>
+                        </div>
                       </div>
                     )}
+
+                    {/* Main body: parallel race lanes */}
+                    {open && !isTransitioning && (n.status === "succeeded" || (n.status === "running" && n.content)) && (
+                      <div className="body">
+                        {/* Winner (primary) lane */}
+                        <div className={`race-lane-card is-winner ${isWinnerTyping ? "is-typing" : ""}`}>
+                          <div className="race-lane-header">
+                            {n.provider && <AgentLogo provider={n.provider} size={14} />}
+                            <span style={{ color: "#facc15" }}>{n.provider || "模型"}</span>
+                            {n.status === "succeeded" && <span className="winner-crown">🏆 最快锁定</span>}
+                            {isWinnerTyping && (
+                              <div className="lane-typing-dots">
+                                <span /><span /><span />
+                              </div>
+                            )}
+                          </div>
+                          <div className="race-lane-body">
+                            <div className="md" dangerouslySetInnerHTML={{ __html: renderMarkdown(n.content || "") }} />
+                            {isWinnerTyping && <span className="typing-cursor" />}
+                          </div>
+                        </div>
+
+                        {/* Runnerup race lanes — all visible, streaming live */}
+                        {hasRunnerups && (
+                          <div className={`race-lanes ${Object.keys(n.runnerups!).length > 1 ? "has-multiple" : ""}`}>
+                            {Object.entries(n.runnerups!).map(([rProvider, rContent]) => {
+                              const isRTyping = n.runnerupTyping?.[rProvider] !== false && n.status === "running";
+                              return (
+                                <div key={rProvider} className={`race-lane-card ${isRTyping ? "is-typing" : ""}`}>
+                                  <div className="race-lane-header">
+                                    <AgentLogo provider={rProvider} size={14} />
+                                    <span>{rProvider}</span>
+                                    {!isRTyping && <span style={{ fontSize: "10px", color: "var(--success)", fontFamily: "var(--mono)", fontWeight: 700 }}>✓ 完成</span>}
+                                    {isRTyping && (
+                                      <div className="lane-typing-dots">
+                                        <span /><span /><span />
+                                      </div>
+                                    )}
+                                  </div>
+                                  <div className="race-lane-body">
+                                    <div className="md" dangerouslySetInnerHTML={{ __html: renderMarkdown(rContent) }} />
+                                    {isRTyping && <span className="typing-cursor" />}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     {open && n.status === "failed" && (
                       <div className="errbox">
                         {n.error ? `${n.error.type}: ${n.error.message}` : "步骤失败"}

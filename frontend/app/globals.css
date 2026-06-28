@@ -231,40 +231,42 @@ button.ghost:hover {
   box-shadow: 0 4px 12px var(--accent-glow);
 }
 
-/* ── Model Selection Grid & Pills ── */
+/* ── Model Selection Grid & Pills (Ultra-Compact Sleek Micro-Chips) ── */
 .model-select-wrapper {
-  margin-top: 20px;
-  background: rgba(15, 23, 42, 0.4);
+  margin-top: 14px;
+  background: rgba(15, 23, 42, 0.45);
   border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 16px;
+  border-radius: 14px;
+  padding: 12px 14px;
   transition: all 0.3s ease;
 }
 .model-select-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 .model-select-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 6px;
 }
 .model-pill {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
-  border-radius: 12px;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 8px;
   background: var(--input-bg);
   border: 1px solid var(--border);
   cursor: pointer;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
   color: var(--muted);
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   user-select: none;
+  white-space: nowrap;
+  overflow: hidden;
 }
 .model-pill:hover {
   border-color: var(--border-bright);
@@ -272,30 +274,32 @@ button.ghost:hover {
   transform: translateY(-1px);
 }
 .model-pill.active {
-  background: linear-gradient(135deg, rgba(56, 189, 248, 0.15), rgba(168, 85, 247, 0.12));
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.16), rgba(168, 85, 247, 0.12));
   border-color: var(--accent);
   color: var(--text);
   font-weight: 600;
-  box-shadow: 0 4px 14px rgba(56, 189, 248, 0.15);
+  box-shadow: 0 2px 10px rgba(56, 189, 248, 0.15);
 }
 .model-pill.active-api {
   border-color: var(--success);
-  background: linear-gradient(135deg, rgba(52, 211, 153, 0.15), rgba(56, 189, 248, 0.1));
+  background: linear-gradient(135deg, rgba(52, 211, 153, 0.16), rgba(56, 189, 248, 0.1));
 }
 .model-pill input[type="checkbox"] {
   accent-color: var(--accent);
-  width: 16px;
-  height: 16px;
+  width: 13px;
+  height: 13px;
   cursor: pointer;
+  flex-shrink: 0;
 }
 .model-badge-tag {
   margin-left: auto;
   font-family: var(--mono);
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 700;
-  padding: 2px 6px;
+  padding: 1px 5px;
   border-radius: 4px;
   text-transform: uppercase;
+  flex-shrink: 0;
 }
 .model-badge-tag.api { background: rgba(52, 211, 153, 0.15); color: var(--success); border: 1px solid rgba(52, 211, 153, 0.3); }
 .model-badge-tag.web { background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.3); }
@@ -429,6 +433,161 @@ button.ghost:hover {
 .md code { font-family: var(--mono); font-size: 0.9em; background: rgba(125,125,125,0.12); border: 1px solid var(--border); border-radius: 6px; padding: 2px 7px; }
 .md pre { background: var(--panel-solid); border: 1px solid var(--border); border-radius: 12px; padding: 18px; overflow-x: auto; box-shadow: inset 0 2px 6px rgba(0,0,0,0.2); }
 .md pre code { border: none; background: none; padding: 0; }
+
+/* ── Typing Cursor Animation ── */
+@keyframes blink-cursor {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+.typing-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1.1em;
+  background: var(--accent);
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  animation: blink-cursor 0.8s step-end infinite;
+  box-shadow: 0 0 6px var(--accent);
+}
+
+/* ── Multi-Model Race Lane Grid ── */
+.race-lanes {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 0 4px;
+}
+.race-lanes.has-multiple {
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+}
+
+.race-lane-card {
+  position: relative;
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  animation: fadeInUp 0.35s ease-out forwards;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+.race-lane-card:hover {
+  border-color: var(--border-bright);
+}
+.race-lane-card.is-winner {
+  border-color: rgba(250, 204, 21, 0.5);
+  box-shadow: 0 0 20px rgba(250, 204, 21, 0.08);
+}
+.race-lane-card.is-typing {
+  border-color: var(--accent);
+  box-shadow: 0 0 14px var(--accent-glow);
+}
+
+/* Lane color accent stripe (left border) */
+.race-lane-card::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--muted);
+  transition: background 0.3s ease;
+}
+.race-lane-card.is-winner::before {
+  background: linear-gradient(180deg, #facc15, #f59e0b);
+}
+.race-lane-card.is-typing::before {
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent);
+}
+
+.race-lane-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: var(--card-head-bg);
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.race-lane-body {
+  padding: 14px 16px;
+  max-height: 400px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+.race-lane-body .md {
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+/* ── Winner Crown Badge ── */
+.winner-crown {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, rgba(250, 204, 21, 0.2), rgba(245, 158, 11, 0.15));
+  color: #facc15;
+  border: 1px solid rgba(250, 204, 21, 0.4);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ── Lane Typing Pulse Indicator ── */
+.lane-typing-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: auto;
+}
+.lane-typing-dots span {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: pulse-dot 1.2s ease-in-out infinite;
+}
+.lane-typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+.lane-typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes pulse-dot {
+  0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
+  40% { opacity: 1; transform: scale(1.2); }
+}
+
+/* ── Step Transition Card ── */
+.step-transition-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px;
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.06), rgba(168, 85, 247, 0.06));
+  border: 1px dashed var(--border-bright);
+  border-radius: 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+.step-transition-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
 
 /* ── Compact Model Probe Header Widget ── */
 .probe-compact-container { position: relative; }
@@ -687,13 +846,13 @@ button.ghost:hover {
 /* ── Mobile & Responsive Adaptation (手机端深度适配) ── */
 @media (max-width: 768px) {
   .wrap {
-    padding: 20px 14px 80px;
+    padding: 16px 10px 80px;
   }
 
   .masthead {
     flex-direction: column;
     align-items: flex-start;
-    gap: 16px;
+    gap: 12px;
   }
 
   .masthead-actions {
@@ -702,26 +861,44 @@ button.ghost:hover {
     justify-content: space-between;
   }
 
+  .brand-row h1 {
+    font-size: 22px;
+  }
+
   .panel {
-    padding: 18px 16px;
-    border-radius: 16px;
+    padding: 14px 12px;
+    border-radius: 14px;
+  }
+
+  textarea {
+    font-size: 14px;
+    padding: 12px 14px;
+    border-radius: 12px;
   }
 
   .controls {
     flex-direction: column;
     align-items: stretch;
-    gap: 12px;
+    gap: 10px;
   }
 
   .controls button {
     width: 100%;
     justify-content: center;
+    padding: 12px 16px;
+    font-size: 13px;
+  }
+
+  /* Model selection grid */
+  .model-select-wrapper {
+    padding: 10px;
+    border-radius: 12px;
   }
 
   .model-select-header {
     flex-direction: column;
     align-items: flex-start;
-    gap: 10px;
+    gap: 8px;
   }
 
   .model-select-header > div {
@@ -730,57 +907,268 @@ button.ghost:hover {
   }
 
   .model-select-grid {
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-    gap: 8px;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 5px;
   }
 
   .model-pill {
-    padding: 8px 10px;
-    font-size: 12px;
+    padding: 5px 8px;
+    font-size: 11px;
+    border-radius: 6px;
+    gap: 4px;
   }
 
+  .model-pill input[type="checkbox"] {
+    width: 12px;
+    height: 12px;
+  }
+
+  .model-badge-tag {
+    font-size: 8px;
+    padding: 1px 4px;
+  }
+
+  /* Progress banner */
+  .progress-banner-card {
+    padding: 14px 12px;
+    margin-top: 20px;
+    border-radius: 14px;
+  }
+
+  .progress-banner-header {
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .progress-banner-title strong {
+    font-size: 13px !important;
+  }
+
+  .progress-banner-step-tag {
+    font-size: 11px;
+    padding: 4px 10px;
+  }
+
+  .progress-tips-row {
+    font-size: 11px;
+  }
+
+  /* Status line */
+  .statusline {
+    margin-top: 20px;
+    font-size: 12px;
+    gap: 10px;
+  }
+
+  /* Relay timeline */
   .relay {
-    padding-left: 24px;
+    padding-left: 20px;
+    margin-top: 16px;
   }
 
   .relay::before {
-    left: 9px;
+    left: 7px;
+  }
+
+  .node {
+    margin-bottom: 16px;
   }
 
   .node::before {
-    left: -24px;
+    left: -20px;
+    width: 12px;
+    height: 12px;
+    border-width: 2px;
+  }
+
+  /* Card header */
+  .card .head {
+    padding: 10px 12px;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .card .key {
+    font-size: 14px;
+  }
+
+  .card .provider-tag {
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: 8px;
+    gap: 4px;
+  }
+
+  .card .badge {
+    font-size: 10px;
+    padding: 3px 10px;
+  }
+
+  .winner-crown {
+    font-size: 9px;
+    padding: 1px 6px;
+  }
+
+  /* Card body */
+  .card .body {
+    padding: 12px 10px;
+  }
+
+  .card {
+    border-radius: 14px;
+  }
+
+  /* Race lane cards — mobile stack */
+  .race-lanes {
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  .race-lanes.has-multiple {
+    grid-template-columns: 1fr;
+  }
+
+  .race-lane-card {
+    border-radius: 10px;
+  }
+
+  .race-lane-header {
+    padding: 8px 10px;
+    font-size: 11px;
+    gap: 6px;
+  }
+
+  .race-lane-body {
+    padding: 10px 12px;
+    max-height: 220px;
+  }
+
+  .race-lane-body .md {
+    font-size: 13px;
+    line-height: 1.55;
+  }
+
+  /* Step transition card */
+  .step-transition-card {
+    padding: 10px 14px;
+    font-size: 12px;
+    gap: 8px;
+    border-radius: 10px;
+  }
+
+  .step-transition-spinner {
     width: 14px;
     height: 14px;
   }
 
-  .card .head {
+  /* Markdown content */
+  .md {
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  .md pre {
+    padding: 12px;
+    border-radius: 10px;
+    font-size: 12px;
+  }
+
+  .md h1 { font-size: 18px; }
+  .md h2 { font-size: 16px; }
+  .md h3 { font-size: 15px; }
+
+  /* Error box */
+  .errbox {
+    font-size: 12px;
     padding: 12px 14px;
-    flex-wrap: wrap;
-    gap: 8px;
+    margin: 10px;
+    border-radius: 10px;
   }
 
-  .card .body {
-    padding: 16px 14px;
-  }
-
+  /* Office scene */
   .office-room {
-    padding: 14px;
-    min-height: 180px;
+    padding: 12px;
+    min-height: 160px;
   }
 
   .office-bubble {
-    max-width: 180px;
-    font-size: 11px;
-    padding: 6px 10px;
+    max-width: 160px;
+    font-size: 10px;
+    padding: 5px 8px;
+  }
+
+  /* Export panel */
+  .panel h3 {
+    font-size: 16px;
   }
 }
 
 @media (max-width: 480px) {
+  .wrap {
+    padding: 12px 8px 80px;
+  }
+
   .brand-row h1 {
-    font-size: 20px;
+    font-size: 18px;
   }
 
   .model-select-grid {
     grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  .model-pill {
+    padding: 5px 7px;
+    font-size: 10px;
+  }
+
+  .card .head {
+    padding: 8px 10px;
+    gap: 5px;
+  }
+
+  .card .key {
+    font-size: 13px;
+  }
+
+  .card .body {
+    padding: 10px 8px;
+  }
+
+  .race-lane-body {
+    max-height: 180px;
+    padding: 8px 10px;
+  }
+
+  .race-lane-body .md {
+    font-size: 12px;
+  }
+
+  .race-lane-header {
+    padding: 6px 8px;
+    font-size: 10px;
+  }
+
+  .progress-banner-card {
+    padding: 10px 8px;
+    border-radius: 12px;
+  }
+
+  .progress-banner-title strong {
+    font-size: 12px !important;
+  }
+
+  .relay {
+    padding-left: 16px;
+  }
+
+  .relay::before {
+    left: 5px;
+  }
+
+  .node::before {
+    left: -16px;
+    width: 10px;
+    height: 10px;
   }
 }

@@ -203,6 +203,7 @@ def run_pipeline(
     os.makedirs(session_dir, exist_ok=True)
 
     seq = 0
+    last_winner_provider: Optional[str] = None
 
     def push(ev: dict) -> None:
         nonlocal seq
@@ -222,9 +223,16 @@ def run_pipeline(
         prefix = f"{index + 1:02d}_{key}"
         _write(os.path.join(session_dir, f"{prefix}_prompt.md"), prompt_text)
 
-        provider_list = step.get("providers")
-        if not provider_list:
-            provider_list = [step["provider"]]
+        raw_provider_list = step.get("providers")
+        if not raw_provider_list:
+            raw_provider_list = [step["provider"]]
+
+        # 规则：两轮之间不使用相同的大模型接力 (Adjacent steps diversity rule)
+        if len(raw_provider_list) > 1 and last_winner_provider is not None:
+            filtered = [p for p in raw_provider_list if p != last_winner_provider]
+            provider_list = filtered if len(filtered) > 0 else raw_provider_list
+        else:
+            provider_list = raw_provider_list
 
         if len(provider_list) == 1:
             provider_name = provider_list[0]
@@ -253,8 +261,11 @@ def run_pipeline(
                 is_cancelled=is_cancelled,
             )
         else:
-            # Multi-provider race-to-first mode
+            # Multi-provider race-to-first mode (首 Token 获胜锁)
             race_state = {"winner": None, "lock": threading.Lock()}
+            log_event(_log, "step_started", job_id=job_id, step_key=key, provider=provider_list[0], site=manager.resolve(provider_list[0]).get("site"))
+            push({"type": "step_started", "key": key, "provider": provider_list[0]})
+            push({"type": "step_chunk", "key": key, "provider": provider_list[0], "delta": f"⚡ 正在同时拉起 {len(provider_list)} 个模型并发竞速赛马中，首 Token 吐字即刻锁定...\n\n"})
 
             def run_candidate(candidate_name: str) -> dict:
                 c_conf = manager.resolve(candidate_name)
@@ -267,6 +278,8 @@ def run_pipeline(
                             push({"type": "step_started", "key": key, "provider": candidate_name})
                         if race_state["winner"] == candidate_name:
                             push({"type": "step_chunk", "key": key, "provider": candidate_name, "delta": delta})
+                        else:
+                            push({"type": "runnerup_chunk", "key": key, "provider": candidate_name, "delta": delta})
 
                 res = _run_step_with_retry(
                     manager, candidate_name, prompt_text, c_conf, key, job_id=job_id, on_chunk=candidate_chunk, is_cancelled=is_cancelled
@@ -277,6 +290,8 @@ def run_pipeline(
                             race_state["winner"] = candidate_name
                             log_event(_log, "step_started", job_id=job_id, step_key=key, provider=candidate_name, site=c_conf.get("site"))
                             push({"type": "step_started", "key": key, "provider": candidate_name})
+                        elif race_state["winner"] != candidate_name:
+                            push({"type": "runnerup_succeeded", "key": key, "provider": candidate_name, "content": res["content"]})
                 return {"provider": candidate_name, "result": res, "conf": c_conf}
 
             from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -309,6 +324,7 @@ def run_pipeline(
                 conf = manager.resolve(provider_name)
                 result = _fail("transient", "all race candidates failed", 1, _now_iso())
 
+        last_winner_provider = provider_name
         duration_ms = _ms_between(result["started_at"], result["finished_at"])
         metrics.observe(
             M_STEP_DURATION_SECONDS,
@@ -340,6 +356,11 @@ def run_pipeline(
                     "content": result["content"],
                 }
             )
+            # Emit transition hint for the next step (if not the last)
+            next_index = index + 1
+            if next_index < len(config["steps"]):
+                next_step = config["steps"][next_index]
+                push({"type": "step_transitioning", "key": next_step["key"]})
         else:
             _write_json(
                 os.path.join(session_dir, f"{prefix}_error.json"), result["error"]

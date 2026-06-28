@@ -9,6 +9,9 @@ export type EventType =
   | "step_chunk"
   | "step_succeeded"
   | "step_failed"
+  | "step_transitioning"
+  | "runnerup_chunk"
+  | "runnerup_succeeded"
   | "pipeline_finished"
   | "fatal";
 

@@ -87,9 +87,10 @@ class TestHappyPath(RuntimeITBase):
                 [
                     (1, "step_started"),
                     (2, "step_succeeded"),
-                    (3, "step_started"),
-                    (4, "step_succeeded"),
-                    (5, "pipeline_finished"),
+                    (3, "step_transitioning"),
+                    (4, "step_started"),
+                    (5, "step_succeeded"),
+                    (6, "pipeline_finished"),
                 ],
             )
             # succeeded events carry content; started events carry provider+key.
