@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import os
 import threading
+import time
 from typing import Callable, Optional
 
 from src.providers._errors import GenerationTimeout, SessionExpiredError
@@ -188,13 +189,20 @@ def run_web(
 
     page.on("response", on_response)
     try:
-        page.goto(site["url"], wait_until="domcontentloaded")
+        if on_chunk:
+            on_chunk(f"🌐 正在连接并加载目标页面 ({site['url']})...\n")
+        page.goto(site["url"], wait_until="domcontentloaded", timeout=min(30000, timeout_ms))
 
         if _is_login_page(page, site):
             raise SessionExpiredError(profile)
 
+        if on_chunk:
+            on_chunk("✍️ 正在输入 Prompt 并提交请求...\n")
         _submit_prompt(page, site, prompt)
-        _wait_generation_done(page, site, timeout_ms)
+
+        if on_chunk:
+            on_chunk("⏳ 正在等待大模型思考与生成回复...\n\n")
+        _wait_generation_done(page, site, timeout_ms, on_chunk=on_chunk, captured=captured)
 
         text = captured["text"] or _extract_dom(page, site)
         if not text or not text.strip():
@@ -228,25 +236,78 @@ def _is_login_page(page, site) -> bool:
 
 def _submit_prompt(page, site, prompt: str) -> None:
     editor = page.locator(site["input_selector"])
-    editor.click()
+    try:
+        editor.click(timeout=6000)
+    except Exception as e:
+        if _is_login_page(page, site):
+            raise SessionExpiredError(getattr(page, "_profile", "")) from e
+        raise GenerationTimeout(getattr(page, "_profile", ""), f"input_selector '{site['input_selector']}' not accessible within 6s: {e}") from e
+
     delay = site.get("type_delay_ms", 10)
     page.keyboard.type(prompt, delay=delay)  # human-like input
     send_selector = site.get("send_selector")
     if send_selector:
-        page.locator(send_selector).click()
+        try:
+            page.locator(send_selector).click(timeout=5000)
+        except Exception:
+            page.keyboard.press("Enter")
     else:
         page.keyboard.press("Enter")
 
 
-def _wait_generation_done(page, site, timeout_ms: int) -> None:
-    # Sleep-free: wait for an explicit completion signal (e.g. the regenerate
-    # button appearing / the stop button detaching). [修正-4 spirit / §6.4-4]
+def _wait_generation_done(
+    page,
+    site: dict,
+    timeout_ms: int,
+    on_chunk: Optional[Callable[[str], None]] = None,
+    captured: Optional[dict] = None,
+) -> None:
     done_selector = site["done_selector"]
     state = site.get("done_state", "visible")
-    try:
-        page.wait_for_selector(done_selector, timeout=timeout_ms, state=state)
-    except Exception as e:
-        raise GenerationTimeout(getattr(page, "_profile", ""), f"generation-done signal timed out: {e}")
+
+    if not on_chunk:
+        try:
+            page.wait_for_selector(done_selector, timeout=timeout_ms, state=state)
+            return
+        except Exception as e:
+            raise GenerationTimeout(
+                getattr(page, "_profile", ""),
+                f"generation-done signal timed out: {e}",
+            )
+
+    start_time = time.time()
+    last_text = (captured.get("text") if captured else None) or ""
+
+    while True:
+        try:
+            page.wait_for_selector(done_selector, timeout=1000, state=state)
+            break
+        except Exception as e:
+            if (time.time() - start_time) * 1000 >= timeout_ms:
+                raise GenerationTimeout(
+                    getattr(page, "_profile", ""),
+                    f"generation-done signal timed out after {timeout_ms}ms: {e}",
+                )
+            try:
+                current_dom = _extract_dom(page, site)
+                if current_dom and current_dom.strip():
+                    if not last_text:
+                        on_chunk(current_dom)
+                        last_text = current_dom
+                    elif current_dom.startswith(last_text):
+                        delta = current_dom[len(last_text):]
+                        if delta:
+                            on_chunk(delta)
+                            last_text = current_dom
+                    elif current_dom != last_text:
+                        delta = current_dom.replace(last_text, "")
+                        if delta:
+                            on_chunk(delta)
+                        last_text = current_dom
+                    if captured is not None:
+                        captured["text"] = current_dom
+            except Exception:
+                pass
 
 
 def _extract_dom(page, site) -> str:

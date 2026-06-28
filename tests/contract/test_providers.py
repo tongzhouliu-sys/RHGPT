@@ -36,7 +36,7 @@ class FakeLocator:
     def count(self):
         return 1 if self._selector in self._page.cfg.get("present", set()) else 0
 
-    def click(self):
+    def click(self, *args, **kwargs):
         pass
 
     @property

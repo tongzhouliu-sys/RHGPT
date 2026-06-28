@@ -1,0 +1,25 @@
+# Race Round 1 — Multi-model Parallel Racing Relay
+# Step 1 concurrently dispatches to Gemini API, ChatGPT Web, and Kimi Web.
+# Whichever model outputs text first wins and takes the relay!
+name: "QA Refinement Race Round 1"
+steps:
+  - key: generate
+    providers:
+      - gemini_api_1
+      - chatgpt_web_1
+      - kimi_web_1
+    prompt: generate
+  - key: review
+    provider: gemini_api_1
+    prompt: review
+  - key: deep_analyze
+    provider: claude_web_1
+    prompt: deep_analyze
+  - key: improve
+    providers:
+      - gemini_api_1
+      - chatgpt_web_1
+    prompt: improve
+  - key: summary
+    provider: gemini_api_1
+    prompt: summary

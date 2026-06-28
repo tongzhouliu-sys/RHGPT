@@ -27,6 +27,7 @@ interface NodeState {
 }
 
 const PIPELINES = [
+  { value: "pipelines/race_round1.yaml", label: "race_round1 · ⚡ 多模型并发竞速接力 (推荐)" },
   { value: "pipelines/round1.yaml", label: "round1 · 首轮架构分析" },
   { value: "pipelines/api_smoke.yaml", label: "api_smoke · 官方API连通路线" },
   { value: "pipelines/continue.yaml", label: "continue · 深入再来一轮" },

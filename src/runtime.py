@@ -217,37 +217,97 @@ def run_pipeline(
             push({"type": "fatal", "error": {"type": "cancelled", "message": "job was cancelled by user"}})
             break
         key = step["key"]
-        provider_name = step["provider"]
         prompt_name = step["prompt"]
-
         prompt_text = builder.build(prompt_name, context)
         prefix = f"{index + 1:02d}_{key}"
         _write(os.path.join(session_dir, f"{prefix}_prompt.md"), prompt_text)
 
-        conf = manager.resolve(provider_name)
-        log_event(
-            _log,
-            "step_started",
-            job_id=job_id,
-            step_key=key,
-            provider=provider_name,
-            site=conf.get("site"),
-        )
-        push({"type": "step_started", "key": key, "provider": provider_name})
+        provider_list = step.get("providers")
+        if not provider_list:
+            provider_list = [step["provider"]]
 
-        def handle_chunk(delta: str) -> None:
-            push({"type": "step_chunk", "key": key, "provider": provider_name, "delta": delta})
+        if len(provider_list) == 1:
+            provider_name = provider_list[0]
+            conf = manager.resolve(provider_name)
+            log_event(
+                _log,
+                "step_started",
+                job_id=job_id,
+                step_key=key,
+                provider=provider_name,
+                site=conf.get("site"),
+            )
+            push({"type": "step_started", "key": key, "provider": provider_name})
 
-        result = _run_step_with_retry(
-            manager,
-            provider_name,
-            prompt_text,
-            conf,
-            key,
-            job_id=job_id,
-            on_chunk=handle_chunk,
-            is_cancelled=is_cancelled,
-        )
+            def handle_chunk(delta: str) -> None:
+                push({"type": "step_chunk", "key": key, "provider": provider_name, "delta": delta})
+
+            result = _run_step_with_retry(
+                manager,
+                provider_name,
+                prompt_text,
+                conf,
+                key,
+                job_id=job_id,
+                on_chunk=handle_chunk,
+                is_cancelled=is_cancelled,
+            )
+        else:
+            # Multi-provider race-to-first mode
+            race_state = {"winner": None, "lock": threading.Lock()}
+
+            def run_candidate(candidate_name: str) -> dict:
+                c_conf = manager.resolve(candidate_name)
+
+                def candidate_chunk(delta: str) -> None:
+                    with race_state["lock"]:
+                        if race_state["winner"] is None:
+                            race_state["winner"] = candidate_name
+                            log_event(_log, "step_started", job_id=job_id, step_key=key, provider=candidate_name, site=c_conf.get("site"))
+                            push({"type": "step_started", "key": key, "provider": candidate_name})
+                        if race_state["winner"] == candidate_name:
+                            push({"type": "step_chunk", "key": key, "provider": candidate_name, "delta": delta})
+
+                res = _run_step_with_retry(
+                    manager, candidate_name, prompt_text, c_conf, key, job_id=job_id, on_chunk=candidate_chunk, is_cancelled=is_cancelled
+                )
+                if res["status"] == "succeeded":
+                    with race_state["lock"]:
+                        if race_state["winner"] is None:
+                            race_state["winner"] = candidate_name
+                            log_event(_log, "step_started", job_id=job_id, step_key=key, provider=candidate_name, site=c_conf.get("site"))
+                            push({"type": "step_started", "key": key, "provider": candidate_name})
+                return {"provider": candidate_name, "result": res, "conf": c_conf}
+
+            from concurrent.futures import ThreadPoolExecutor, as_completed
+            with ThreadPoolExecutor(max_workers=len(provider_list)) as race_executor:
+                futures = [race_executor.submit(run_candidate, p) for p in provider_list]
+                successful_res = None
+                first_failed = None
+                for future in as_completed(futures):
+                    try:
+                        cand = future.result()
+                        if cand["result"]["status"] == "succeeded":
+                            with race_state["lock"]:
+                                if successful_res is None or cand["provider"] == race_state["winner"]:
+                                    successful_res = cand
+                        elif first_failed is None:
+                            first_failed = cand
+                    except Exception:
+                        pass
+
+            if successful_res:
+                provider_name = successful_res["provider"]
+                result = successful_res["result"]
+                conf = successful_res["conf"]
+            elif first_failed:
+                provider_name = first_failed["provider"]
+                result = first_failed["result"]
+                conf = first_failed["conf"]
+            else:
+                provider_name = provider_list[0]
+                conf = manager.resolve(provider_name)
+                result = _fail("transient", "all race candidates failed", 1, _now_iso())
 
         duration_ms = _ms_between(result["started_at"], result["finished_at"])
         metrics.observe(
