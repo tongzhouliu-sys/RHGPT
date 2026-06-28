@@ -100,6 +100,10 @@ class TestPipelineValidation(unittest.TestCase):
         with self.assertRaises(ValidationError):
             validate_pipeline_file(PL("bad_provider"), FIX_CFG, FIX_PROMPTS)
 
+    def test_validate_race_round1_pipeline(self):
+        parsed = validate_pipeline_file("pipelines/race_round1.yaml", "config/providers.yaml", "prompts")
+        self.assertEqual(len(parsed["steps"]), 5)
+
 
 class TestProvidersConfigValidation(unittest.TestCase):
     def test_good_fixture_passes(self):

@@ -113,10 +113,18 @@ def validate_pipeline(
                 errors.append(f"{loc} duplicate key")
             seen_keys.add(key)
 
-        if not isinstance(provider, str) or not provider.strip():
-            errors.append(f"{loc} missing non-empty 'provider'")
-        elif provider not in providers:
-            errors.append(f"{loc} provider '{provider}' not in providers.yaml")
+        provider_list = step.get("providers")
+        if isinstance(provider_list, list) and provider_list:
+            for p in provider_list:
+                if not isinstance(p, str) or not p.strip():
+                    errors.append(f"{loc} contains invalid provider name in 'providers' list")
+                elif p not in providers:
+                    errors.append(f"{loc} candidate provider '{p}' not in providers.yaml")
+        else:
+            if not isinstance(provider, str) or not provider.strip():
+                errors.append(f"{loc} missing non-empty 'provider'")
+            elif provider not in providers:
+                errors.append(f"{loc} provider '{provider}' not in providers.yaml")
 
         if not isinstance(prompt, str) or not prompt.strip():
             errors.append(f"{loc} missing non-empty 'prompt'")

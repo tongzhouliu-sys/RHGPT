@@ -13,7 +13,8 @@ import os
 from src.providers._errors import GenerationTimeout, ProviderError
 
 _ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
-_DEFAULT_MODEL = "gemini-1.5-pro"
+_DEFAULT_MODEL = "gemini-1.5-flash"
+_FALLBACK_MODELS = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-1.5-pro-latest"]
 
 
 def _extract(data: dict) -> str:
@@ -32,18 +33,31 @@ def run(profile: str, prompt: str, *, timeout_ms: int = 120000, **options) -> st
 
     import requests
 
-    url = _ENDPOINT.format(model=model)
-    resp = requests.post(
-        url,
-        params={"key": key},
-        json={"contents": [{"role": "user", "parts": [{"text": prompt}]}]},
-        timeout=timeout_ms / 1000,
-    )
-    resp.raise_for_status()
-    text = _extract(resp.json())
-    if not text:
-        raise GenerationTimeout(profile, "empty Gemini response")
-    return text
+    models_to_try = [model] + [m for m in _FALLBACK_MODELS if m != model]
+    last_err = None
+
+    for m in models_to_try:
+        url = _ENDPOINT.format(model=m)
+        try:
+            resp = requests.post(
+                url,
+                params={"key": key},
+                json={"contents": [{"role": "user", "parts": [{"text": prompt}]}]},
+                timeout=timeout_ms / 1000,
+            )
+            resp.raise_for_status()
+            text = _extract(resp.json())
+            if not text:
+                raise GenerationTimeout(profile, "empty Gemini response")
+            return text
+        except requests.HTTPError as e:
+            last_err = e
+            if e.response is not None and e.response.status_code == 404:
+                continue
+            raise e
+    if last_err:
+        raise last_err
+    raise ProviderError(profile, "Gemini call failed")
 
 
 __all__ = ["run"]
