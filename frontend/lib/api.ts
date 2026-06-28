@@ -42,7 +42,7 @@ function toHex(buf: ArrayBuffer): string {
 }
 
 async function sha256Hex(bytes: Uint8Array): Promise<string> {
-  return toHex(await crypto.subtle.digest("SHA-256", bytes));
+  return toHex(await crypto.subtle.digest("SHA-256", bytes as any));
 }
 
 async function hmacHex(secret: string, message: string): Promise<string> {
