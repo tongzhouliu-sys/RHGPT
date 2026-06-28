@@ -44,6 +44,14 @@ providers:
     site: qwen_api
     profile: ""
 
+  openai_api_1:
+    site: openai_api
+    profile: ""
+
+  anthropic_api_1:
+    site: anthropic_api
+    profile: ""
+
   # --- M1 stub (A-owned src/providers/stub.py): runs the kernel with no model.
   # Keep for smoke tests; safe to leave in place.
   stub_1:

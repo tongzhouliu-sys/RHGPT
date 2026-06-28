@@ -13,8 +13,8 @@ import os
 from src.providers._errors import GenerationTimeout, ProviderError
 
 _ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
-_DEFAULT_MODEL = "gemini-1.5-flash"
-_FALLBACK_MODELS = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-1.5-pro-latest"]
+_DEFAULT_MODEL = "gemini-2.5-flash"
+_FALLBACK_MODELS = ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-2.0-flash", "gemini-1.5-flash"]
 
 
 def _extract(data: dict) -> str:
@@ -38,23 +38,33 @@ def run(profile: str, prompt: str, *, timeout_ms: int = 120000, **options) -> st
 
     for m in models_to_try:
         url = _ENDPOINT.format(model=m)
-        try:
-            resp = requests.post(
-                url,
-                params={"key": key},
-                json={"contents": [{"role": "user", "parts": [{"text": prompt}]}]},
-                timeout=timeout_ms / 1000,
-            )
-            resp.raise_for_status()
-            text = _extract(resp.json())
-            if not text:
-                raise GenerationTimeout(profile, "empty Gemini response")
-            return text
-        except requests.HTTPError as e:
-            last_err = e
-            if e.response is not None and e.response.status_code == 404:
-                continue
-            raise e
+        for attempt in range(2):
+            try:
+                resp = requests.post(
+                    url,
+                    params={"key": key},
+                    json={"contents": [{"role": "user", "parts": [{"text": prompt}]}]},
+                    timeout=timeout_ms / 1000,
+                )
+                resp.raise_for_status()
+                text = _extract(resp.json())
+                if not text:
+                    raise GenerationTimeout(profile, "empty Gemini response")
+                return text
+            except requests.HTTPError as e:
+                last_err = e
+                if e.response is not None:
+                    status = e.response.status_code
+                    if status == 404:
+                        break  # model not found, switch model
+                    if status == 429:
+                        if attempt == 0:
+                            import time
+                            time.sleep(2.0)
+                            continue  # retry once
+                        else:
+                            break  # quota exceeded for this model, switch model
+                raise e
     if last_err:
         raise last_err
     raise ProviderError(profile, "Gemini call failed")

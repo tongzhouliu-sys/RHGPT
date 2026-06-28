@@ -66,15 +66,17 @@ def _headless() -> bool:
     return os.environ.get("RHCLOUD_HEADLESS", "1") == "1"
 
 
-def _ensure_playwright():
-    global _PW
-    if _PW is None:
-        with _PW_LOCK:
-            if _PW is None:
-                from playwright.sync_api import sync_playwright
+_THREAD_LOCAL = threading.local()
 
-                _PW = sync_playwright().start()
-    return _PW
+
+def _ensure_playwright():
+    pw = getattr(_THREAD_LOCAL, "pw", None)
+    if pw is None:
+        from playwright.sync_api import sync_playwright
+
+        pw = sync_playwright().start()
+        _THREAD_LOCAL.pw = pw
+    return pw
 
 
 def _profile_lock(profile: str) -> threading.Lock:
@@ -87,37 +89,50 @@ def _profile_lock(profile: str) -> threading.Lock:
 
 
 def get_context(profile: str):
-    """Return a persistent BrowserContext for `profile`, creating it once.
+    """Return a BrowserContext for `profile`, managing thread-local Playwright instances."""
+    contexts = getattr(_THREAD_LOCAL, "contexts", None)
+    if contexts is None:
+        contexts = {}
+        _THREAD_LOCAL.contexts = contexts
 
-    `profile` is the user_data_dir (login state lives there). Empty profile maps
-    to a throwaway default dir (only sensible for sites that don't need login).
-    """
-    with _POOL_LOCK:
-        ctx = _CONTEXTS.get(profile)
+    ctx = contexts.get(profile)
     if ctx is not None:
         return ctx
 
     with _profile_lock(profile):
-        with _POOL_LOCK:
-            ctx = _CONTEXTS.get(profile)
+        ctx = contexts.get(profile)
         if ctx is not None:
             return ctx
 
         pw = _ensure_playwright()
         user_data_dir = profile or os.path.join("data", "profiles", "_default")
         os.makedirs(user_data_dir, exist_ok=True)
-        ctx = pw.chromium.launch_persistent_context(
-            user_data_dir,
-            headless=_headless(),
-            user_agent=DEFAULT_UA,
-            locale="zh-CN",
-            timezone_id="Asia/Shanghai",
-            viewport={"width": 1280, "height": 800},
-            args=["--disable-blink-features=AutomationControlled", "--no-sandbox"],
-        )
+        try:
+            ctx = pw.chromium.launch_persistent_context(
+                user_data_dir,
+                headless=_headless(),
+                user_agent=DEFAULT_UA,
+                locale="zh-CN",
+                timezone_id="Asia/Shanghai",
+                viewport={"width": 1280, "height": 800},
+                args=["--disable-blink-features=AutomationControlled", "--no-sandbox"],
+            )
+        except Exception:
+            # Fallback if profile directory is locked by another process/thread
+            browser = pw.chromium.launch(
+                headless=_headless(),
+                args=["--disable-blink-features=AutomationControlled", "--no-sandbox"],
+            )
+            ctx = browser.new_context(
+                user_agent=DEFAULT_UA,
+                locale="zh-CN",
+                timezone_id="Asia/Shanghai",
+                viewport={"width": 1280, "height": 800},
+            )
         ctx.add_init_script(_STEALTH_JS)
+        contexts[profile] = ctx
         with _POOL_LOCK:
-            _CONTEXTS[profile] = ctx
+            _CONTEXTS[f"{threading.get_ident()}_{profile}"] = ctx
         return ctx
 
 
@@ -133,13 +148,13 @@ def shutdown() -> None:
             ctx.close()
         except Exception:
             pass
-    with _PW_LOCK:
-        if _PW is not None:
-            try:
-                _PW.stop()
-            except Exception:
-                pass
-            _PW = None
+    pw = getattr(_THREAD_LOCAL, "pw", None)
+    if pw is not None:
+        try:
+            pw.stop()
+        except Exception:
+            pass
+        _THREAD_LOCAL.pw = None
 
 
 # ----- the shared web Provider engine ----------------------------------------

@@ -6,6 +6,8 @@ steps:
   - key: generate
     providers:
       - gemini_api_1
+      - openai_api_1
+      - anthropic_api_1
       - chatgpt_web_1
       - kimi_web_1
     prompt: generate
@@ -18,6 +20,7 @@ steps:
   - key: improve
     providers:
       - gemini_api_1
+      - openai_api_1
       - chatgpt_web_1
     prompt: improve
   - key: summary
