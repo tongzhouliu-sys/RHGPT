@@ -142,7 +142,7 @@ def create_app(
     frontend_origin = frontend_origin or os.environ.get(
         "FRONTEND_ORIGIN", "https://your-frontend.pages.dev"
     )
-    max_concurrent = max_concurrent or _env_int("MAX_CONCURRENT_JOBS", 2)
+    max_concurrent = max_concurrent or _env_int("MAX_CONCURRENT_JOBS", 5)
     rate_limit_per_min = rate_limit_per_min or _env_int("RATE_LIMIT_PER_MIN", 30)
     alert_threshold = alert_threshold or threshold_from_env()
 

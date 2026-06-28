@@ -300,7 +300,7 @@ button.ghost:hover {
 .model-badge-tag.api { background: rgba(52, 211, 153, 0.15); color: var(--success); border: 1px solid rgba(52, 211, 153, 0.3); }
 .model-badge-tag.web { background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.3); }
 
-/* Status Line */
+/* Status Line & Progress Banner */
 .statusline { 
   display: flex; 
   align-items: center; 
@@ -316,6 +316,64 @@ button.ghost:hover {
 .dot.err { background: var(--danger); box-shadow: 0 0 14px var(--danger); }
 
 @keyframes pulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.45; transform: scale(0.85); } }
+
+.progress-banner-card {
+  background: var(--panel);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--border-bright);
+  border-radius: 18px;
+  padding: 20px 24px;
+  margin-top: 28px;
+  box-shadow: 0 8px 32px var(--accent-glow);
+  animation: fadeInUp 0.3s ease-out forwards;
+}
+.progress-banner-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.progress-banner-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.progress-banner-step-tag {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent);
+  background: rgba(56, 189, 248, 0.12);
+  padding: 6px 14px;
+  border-radius: 99px;
+  border: 1px solid var(--border);
+}
+.progress-track {
+  width: 100%;
+  height: 8px;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid var(--border);
+  border-radius: 99px;
+  overflow: hidden;
+  position: relative;
+}
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), #a855f7);
+  border-radius: 99px;
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 0 12px var(--accent);
+}
+.progress-tips-row {
+  margin-top: 12px;
+  font-size: 12px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
 
 /* Relay timeline */
 .relay { margin-top: 24px; position: relative; padding-left: 40px; }

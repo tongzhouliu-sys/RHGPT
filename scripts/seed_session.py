@@ -21,7 +21,7 @@ import os
 import sys
 
 # Sites that have a web Provider module exposing a SITE config.
-WEB_SITES = ("chatgpt", "claude", "deepseek", "zai", "kimi")
+WEB_SITES = ("chatgpt", "claude", "deepseek", "zai", "kimi", "qwen", "gemini")
 
 
 def _site_url(site: str) -> str:

@@ -35,6 +35,14 @@ providers:
     site: kimi
     profile: data/profiles/kimi_acc1
 
+  qwen_web_1:
+    site: qwen
+    profile: data/profiles/qwen_acc1
+
+  gemini_web_1:
+    site: gemini
+    profile: data/profiles/gemini_acc1
+
   # --- Official-API Providers (profile empty; API key via env, §9.3) ---------
   gemini_api_1:
     site: gemini_api

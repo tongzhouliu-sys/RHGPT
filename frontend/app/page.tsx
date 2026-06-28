@@ -42,12 +42,23 @@ const AVAILABLE_MODELS = [
   { id: "claude_web_1", label: "Claude Web 网页", provider: "claude", api: false },
   { id: "kimi_web_1", label: "Kimi Web 网页", provider: "kimi", api: false },
   { id: "deepseek_web_1", label: "DeepSeek Web 网页", provider: "deepseek", api: false },
+  { id: "zai_web_1", label: "智谱清言 Z.AI Web 网页", provider: "zai", api: false },
+  { id: "qwen_web_1", label: "Qwen 国际版 Web (chat.qwen.ai)", provider: "qwen", api: false },
+  { id: "gemini_web_1", label: "Gemini Web 网页 (gemini.google.com)", provider: "gemini", api: false },
 ];
 
 const BADGE: Record<NodeStatus, string> = {
   running: "运行中",
   succeeded: "完成",
   failed: "失败",
+};
+
+const STEP_LABELS: Record<string, string> = {
+  generate: "1/5 初稿生成",
+  review: "2/5 交叉评审",
+  deep_analyze: "3/5 逻辑拆解",
+  improve: "4/5 方案优化",
+  summary: "5/5 总结收尾",
 };
 
 export default function Page() {
@@ -60,6 +71,7 @@ export default function Page() {
   const [jobId, setJobId] = useState<string | null>(null);
   const [banner, setBanner] = useState<string | null>(null);
   const [expandedKeys, setExpandedKeys] = useState<Record<string, boolean>>({});
+  const [concurrentBusy, setConcurrentBusy] = useState(false);
   const [selectedModels, setSelectedModels] = useState<string[]>([
     "openai_api_1",
     "gemini_api_1",
@@ -153,6 +165,7 @@ export default function Page() {
     setOrder([]);
     setNodes({});
     setExpandedKeys({});
+    setConcurrentBusy(false);
     setJobId(null);
     setPhase("running");
 
@@ -163,8 +176,14 @@ export default function Page() {
       setPhase((p) => (p === "running" ? "done" : p));
     } catch (err) {
       if (ac.signal.aborted) return;
-      setBanner(err instanceof Error ? err.message : "提交失败");
-      setPhase("error");
+      const msg = err instanceof Error ? err.message : "提交失败";
+      if (msg.includes("429") || msg.includes("max concurrent") || msg.includes("rate limit")) {
+        setConcurrentBusy(true);
+        setPhase("idle");
+      } else {
+        setBanner(msg);
+        setPhase("error");
+      }
     }
   }, [question, pipeline, phase, applyEvent]);
 
@@ -318,7 +337,7 @@ export default function Page() {
               ))}
             </select>
           </div>
-          <button onClick={run} disabled={running || !question.trim()}>
+          <button id="start-btn" onClick={run} disabled={running || !question.trim()}>
             {running ? "🚀 智能协同中…" : "🚀 开始接力执行"}
           </button>
           {running && (
@@ -329,6 +348,46 @@ export default function Page() {
         </div>
       </section>
 
+      {/* 并发已满或限制时的友好降级交互卡片 */}
+      {concurrentBusy && (
+        <section className="panel" style={{ border: "1px solid var(--warn)", background: "rgba(251, 191, 36, 0.08)", marginTop: "24px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", color: "var(--warn)", fontWeight: 700, fontSize: "16px" }}>
+            <span style={{ fontSize: "22px" }}>⚠️</span>
+            <span>当前通道并发已满 (Max Concurrent Jobs Reached)</span>
+          </div>
+          <p style={{ margin: "12px 0 18px 0", fontSize: "14px", lineHeight: "1.6", color: "var(--text)" }}>
+            系统检测到当前模型通道繁忙。您无需终止任务，建议立即一键切换为高效【直连 API 模型组】继续工作，或点击重试：
+          </p>
+          <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
+            <button
+              type="button"
+              onClick={() => {
+                setConcurrentBusy(false);
+                selectOnlyAPI();
+                setTimeout(() => {
+                  const btn = document.getElementById("start-btn");
+                  if (btn) btn.click();
+                }, 100);
+              }}
+              style={{ background: "linear-gradient(135deg, var(--warn), #f59e0b)", color: "#000" }}
+            >
+              ⚡ 切换为【直连 API】继续重试
+            </button>
+            <button
+              type="button"
+              className="ghost"
+              onClick={() => {
+                setConcurrentBusy(false);
+                const btn = document.getElementById("start-btn");
+                if (btn) btn.click();
+              }}
+            >
+              🔄 原模型组重试
+            </button>
+          </div>
+        </section>
+      )}
+
       {/* 动态小人沟通互动办公室场景 (运行中或已有执行步骤时展示) */}
       {(running || phase !== "idle") && (
         <AvatarScene activeProvider={currentProvider} stepKey={currentRunningKey} question={question} />
@@ -337,9 +396,39 @@ export default function Page() {
       {/* 任务执行时间轴与节点卡片 */}
       {phase !== "idle" && (
         <>
-          <div className="statusline">
-            <span className={`dot ${statusDot}`} />
-            <span>{statusText}</span>
+          <div className="progress-banner-card">
+            <div className="progress-banner-header">
+              <div className="progress-banner-title">
+                <span className={`dot ${statusDot}`} />
+                <strong style={{ fontSize: "15px" }}>
+                  {running
+                    ? `⏳ AI 接力协同中 · 当前第 ${Math.min(order.length, 5)} / 5 步`
+                    : finished
+                    ? "🎉 所有 5 轮多模型协同接力已完美完成"
+                    : "⚠️ 任务中断或出错"}
+                </strong>
+              </div>
+              {running && (
+                <span className="progress-banner-step-tag">
+                  {currentRunningKey ? `👉 正在进行: ${STEP_LABELS[currentRunningKey] || currentRunningKey}` : "🔄 阶段交接与竞速锁定中..."}
+                </span>
+              )}
+            </div>
+
+            <div className="progress-track">
+              <div
+                className="progress-fill"
+                style={{
+                  width: `${finished ? 100 : Math.min(100, Math.max(12, (order.length / 5) * 100))}%`,
+                }}
+              />
+            </div>
+
+            {running && (
+              <div className="progress-tips-row">
+                <span>💡 协同交互提示：多模型接力共分 5 步（生成→评审→拆解→优化→总结），当上一轮模型打字完成后，将自动开启下一轮大模型接力。</span>
+              </div>
+            )}
           </div>
 
           <div className="relay">
