@@ -71,6 +71,10 @@ def validate_providers_config(providers_cfg: dict, where: str = "providers.yaml"
         for opt in ("timeout_ms", "retries", "retry_backoff_ms"):
             if opt in conf and not isinstance(conf[opt], int):
                 errors.append(f"provider '{name}' '{opt}' must be an integer")
+        # New optional string fields (backward compatible)
+        for sopt in ("model", "label", "base_url", "api_key_env"):
+            if sopt in conf and not isinstance(conf[sopt], str):
+                errors.append(f"provider '{name}' '{sopt}' must be a string")
     if errors:
         raise ValidationError(errors, where=where)
 

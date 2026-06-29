@@ -117,6 +117,7 @@ def create_app(
     frontend_origin: Optional[str] = None,
     max_concurrent: Optional[int] = None,
     rate_limit_per_min: Optional[int] = None,
+    job_timeout: Optional[int] = None,
     max_skew: int = 300,
     alert_threshold: Optional[int] = None,
     clock: Callable[[], float] = time.time,
@@ -144,6 +145,7 @@ def create_app(
     )
     max_concurrent = max_concurrent or _env_int("MAX_CONCURRENT_JOBS", 5)
     rate_limit_per_min = rate_limit_per_min or _env_int("RATE_LIMIT_PER_MIN", 30)
+    job_timeout = job_timeout or _env_int("JOB_TIMEOUT_SECONDS", 900)
     alert_threshold = alert_threshold or threshold_from_env()
 
     app = FastAPI(title="RHCLOUD V1")
@@ -220,10 +222,42 @@ def create_app(
     def run_worker(job_id: str, pipeline: str, user_question: str) -> None:
         job = jobs[job_id]
         emit = make_emit(job)
+        job["emit"] = emit  # store for reuse by cancel endpoint
         os.makedirs(job["session_dir"], exist_ok=True)
-        
+
         def is_cancelled() -> bool:
             return job.get("cancelled", False)
+
+        # ---- Watchdog: force-release slot after job_timeout seconds -----------
+        def _watchdog() -> None:
+            with jobs_guard:
+                if job.get("_released"):
+                    return
+                job["_released"] = True
+                active["n"] -= 1
+                metrics.set_gauge(M_ACTIVE_JOBS, active["n"])
+            job["cancelled"] = True
+            if job["status"] == "running":
+                job["status"] = "failed"
+            emit(
+                {
+                    "type": "fatal",
+                    "error": {
+                        "type": "timeout",
+                        "message": f"job exceeded {job_timeout}s global timeout (watchdog)",
+                    },
+                }
+            )
+            log_event(
+                _log,
+                "job_watchdog_timeout",
+                level=logging.ERROR,
+                job_id=job_id,
+            )
+
+        watchdog_timer = threading.Timer(job_timeout, _watchdog)
+        watchdog_timer.daemon = True
+        watchdog_timer.start()
 
         try:
             if pass_runtime_kwargs:
@@ -250,9 +284,12 @@ def create_app(
             job["status"] = "failed"
             metrics.inc(M_JOBS_FAILED_TOTAL)
         finally:
+            watchdog_timer.cancel()
             with jobs_guard:
-                active["n"] -= 1
-                metrics.set_gauge(M_ACTIVE_JOBS, active["n"])
+                if not job.get("_released"):
+                    job["_released"] = True
+                    active["n"] -= 1
+                    metrics.set_gauge(M_ACTIVE_JOBS, active["n"])
 
     # ---- routes --------------------------------------------------------------
     @app.post("/jobs")
@@ -353,7 +390,8 @@ def create_app(
         if job["status"] == "running":
             job["cancelled"] = True
             job["status"] = "failed"
-            make_emit(job)({"type": "fatal", "error": {"type": "cancelled", "message": "job cancelled by user"}})
+            emit_fn = job.get("emit") or make_emit(job)
+            emit_fn({"type": "fatal", "error": {"type": "cancelled", "message": "job cancelled by user"}})
         return {"job_id": job_id, "status": job["status"]}
 
     @app.get("/jobs/{job_id}/events")
@@ -453,6 +491,25 @@ def create_app(
         with jobs_guard:
             running = sum(1 for j in jobs.values() if j["status"] == "running")
         return {"status": "ok", "active_jobs": running, "metrics": metrics.snapshot()}
+
+    @app.get("/providers")
+    async def list_providers():
+        """Return all registered providers with metadata and live account pool status for frontend."""
+        mgr = ProviderManager(providers_path)
+        pool_status = {s["provider_name"]: s for s in mgr.get_pool().get_status_summary()}
+        result = []
+        for name, conf in mgr.providers.items():
+            slot_info = pool_status.get(name, {})
+            result.append({
+                "id": name,
+                "site": conf.get("site", ""),
+                "label": conf.get("label", name),
+                "model": conf.get("model"),
+                "api": conf.get("profile", "") == "",
+                "status": slot_info.get("status", "idle"),
+                "fail_count": slot_info.get("fail_count", 0),
+            })
+        return result
 
     return app
 

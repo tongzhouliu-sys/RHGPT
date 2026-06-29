@@ -39,6 +39,11 @@ class ProviderManager:
         self.defaults = {**DEFAULTS, **(cfg.get("defaults") or {})}
         self.providers = cfg.get("providers") or {}
         self._module_cache: dict[str, object] = {}
+        from src.account_pool import AccountPoolManager
+        self.pool = AccountPoolManager.get_instance(self.config)
+
+    def get_pool(self):
+        return self.pool
 
     def resolve(self, provider_name: str) -> dict:
         conf = self.providers.get(provider_name)
@@ -53,6 +58,10 @@ class ProviderManager:
         return {
             "site": conf["site"],
             "profile": conf.get("profile", ""),
+            "model": conf.get("model"),              # actual model ID (None = provider default)
+            "label": conf.get("label", provider_name), # display name for frontend/SSE
+            "base_url": conf.get("base_url"),          # API endpoint override
+            "api_key_env": conf.get("api_key_env"),    # env-var name for the API key
             "timeout_ms": int(conf.get("timeout_ms", self.defaults["timeout_ms"])),
             "retries": int(conf.get("retries", self.defaults["retries"])),
             "retry_backoff_ms": int(
@@ -82,7 +91,16 @@ class ProviderManager:
                 f"(contract 1 violated)"
             )
         # Contract: run(profile, prompt, **options) -> str
-        return module.run(conf["profile"], prompt, timeout_ms=conf["timeout_ms"], **options)
+        # Pass through model/base_url/api_key_env from providers.yaml so each
+        # instance can target a different model/endpoint.
+        extra: dict = {}
+        if conf.get("model"):
+            extra["model"] = conf["model"]
+        if conf.get("base_url"):
+            extra["base_url"] = conf["base_url"]
+        if conf.get("api_key_env"):
+            extra["api_key_env"] = conf["api_key_env"]
+        return module.run(conf["profile"], prompt, timeout_ms=conf["timeout_ms"], **extra, **options)
 
 
 __all__ = ["ProviderManager", "DEFAULTS"]

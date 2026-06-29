@@ -10,6 +10,7 @@ export type EventType =
   | "step_succeeded"
   | "step_failed"
   | "step_transitioning"
+  | "step_queued"
   | "runnerup_chunk"
   | "runnerup_succeeded"
   | "pipeline_finished"
@@ -20,6 +21,9 @@ export interface RhEvent {
   type: EventType;
   key?: string;
   provider?: string;
+  label?: string;
+  model?: string;
+  position?: number;
   content?: string;
   delta?: string;
   error?: { type: string; message: string };
@@ -200,4 +204,43 @@ export async function downloadExport(jobId: string, mode: ExportMode): Promise<v
   a.click();
   a.remove();
   URL.revokeObjectURL(url);
+}
+
+/** Provider info returned by GET /providers. */
+export interface ProviderInfo {
+  id: string;
+  site: string;
+  label: string;
+  model: string | null;
+  api: boolean;
+  status?: string;
+  fail_count?: number;
+}
+
+/** Fetch the registered provider list from the backend. */
+export async function fetchProviders(): Promise<ProviderInfo[]> {
+  if (USE_MOCK) {
+    // Return a static fallback list when running in mock mode
+    return [
+      { id: "openai_api_1", site: "openai_api", label: "GPT-4o Mini", model: "gpt-4o-mini", api: true },
+      { id: "gemini_api_1", site: "gemini_api", label: "Gemini 2.5 Flash", model: "gemini-2.5-flash", api: true },
+      { id: "anthropic_api_1", site: "anthropic_api", label: "Claude 3.5 Sonnet", model: "claude-3-5-sonnet-20241022", api: true },
+      { id: "qwen_api_1", site: "qwen_api", label: "Qwen Plus", model: "qwen-plus", api: true },
+      { id: "chatgpt_web_1", site: "chatgpt", label: "ChatGPT Web", model: null, api: false },
+      { id: "claude_web_1", site: "claude", label: "Claude Web", model: null, api: false },
+      { id: "kimi_web_1", site: "kimi", label: "Kimi Web", model: null, api: false },
+      { id: "deepseek_web_1", site: "deepseek", label: "DeepSeek Web", model: null, api: false },
+      { id: "zai_web_1", site: "zai", label: "Z.AI 智谱 Web", model: null, api: false },
+      { id: "qwen_web_1", site: "qwen", label: "Qwen 国际版 Web", model: null, api: false },
+      { id: "gemini_web_1", site: "gemini", label: "Gemini Web", model: null, api: false },
+    ];
+  }
+  try {
+    const res = await fetch(`${API_BASE}/providers`);
+    if (!res.ok) throw new Error(`Fetch providers failed (${res.status})`);
+    return (await res.json()) as ProviderInfo[];
+  } catch {
+    // Fallback: return empty so UI can show a helpful message
+    return [];
+  }
 }

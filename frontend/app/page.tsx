@@ -5,9 +5,11 @@ import {
   cancelJob,
   createJob,
   downloadExport,
+  fetchProviders,
   streamEvents,
   USE_MOCK,
   type ExportMode,
+  type ProviderInfo,
   type RhEvent,
 } from "../lib/api";
 import { renderMarkdown } from "../lib/markdown";
@@ -21,11 +23,15 @@ type NodeStatus = "running" | "succeeded" | "failed";
 interface NodeState {
   key: string;
   provider?: string;
+  label?: string;
+  model?: string;
   status: NodeStatus;
+  queuedPosition?: number;
   content?: string;
   error?: { type: string; message: string };
   runnerups?: Record<string, string>;
   runnerupTyping?: Record<string, boolean>;
+  runnerupLabels?: Record<string, string>;
 }
 
 const PIPELINES = [
@@ -35,18 +41,19 @@ const PIPELINES = [
   { value: "pipelines/continue.yaml", label: "continue · 深入再来一轮" },
 ];
 
-const AVAILABLE_MODELS = [
-  { id: "openai_api_1", label: "OpenAI API", provider: "openai_api", api: true },
-  { id: "gemini_api_1", label: "Gemini API", provider: "gemini_api", api: true },
-  { id: "anthropic_api_1", label: "Anthropic API", provider: "anthropic_api", api: true },
-  { id: "qwen_api_1", label: "Qwen API", provider: "qwen_api", api: true },
-  { id: "chatgpt_web_1", label: "ChatGPT Web", provider: "chatgpt", api: false },
-  { id: "claude_web_1", label: "Claude Web", provider: "claude", api: false },
-  { id: "kimi_web_1", label: "Kimi Web", provider: "kimi", api: false },
-  { id: "deepseek_web_1", label: "DeepSeek Web", provider: "deepseek", api: false },
-  { id: "zai_web_1", label: "Z.AI 智谱 Web", provider: "zai", api: false },
-  { id: "qwen_web_1", label: "Qwen 国际版 Web", provider: "qwen", api: false },
-  { id: "gemini_web_1", label: "Gemini Web", provider: "gemini", api: false },
+// Fallback hardcoded list used only if /providers fetch fails
+const FALLBACK_MODELS: ProviderInfo[] = [
+  { id: "openai_api_1", site: "openai_api", label: "GPT-4o Mini", model: "gpt-4o-mini", api: true },
+  { id: "gemini_api_1", site: "gemini_api", label: "Gemini 2.5 Flash", model: "gemini-2.5-flash", api: true },
+  { id: "anthropic_api_1", site: "anthropic_api", label: "Claude 3.5 Sonnet", model: "claude-3-5-sonnet-20241022", api: true },
+  { id: "qwen_api_1", site: "qwen_api", label: "Qwen Plus", model: "qwen-plus", api: true },
+  { id: "chatgpt_web_1", site: "chatgpt", label: "ChatGPT Web", model: null, api: false },
+  { id: "claude_web_1", site: "claude", label: "Claude Web", model: null, api: false },
+  { id: "kimi_web_1", site: "kimi", label: "Kimi Web", model: null, api: false },
+  { id: "deepseek_web_1", site: "deepseek", label: "DeepSeek Web", model: null, api: false },
+  { id: "zai_web_1", site: "zai", label: "Z.AI 智谱 Web", model: null, api: false },
+  { id: "qwen_web_1", site: "qwen", label: "Qwen 国际版 Web", model: null, api: false },
+  { id: "gemini_web_1", site: "gemini", label: "Gemini Web", model: null, api: false },
 ];
 
 const BADGE: Record<NodeStatus, string> = {
@@ -74,14 +81,23 @@ export default function Page() {
   const [banner, setBanner] = useState<string | null>(null);
   const [expandedKeys, setExpandedKeys] = useState<Record<string, boolean>>({});
   const [concurrentBusy, setConcurrentBusy] = useState(false);
-  const [selectedModels, setSelectedModels] = useState<string[]>([
-    "openai_api_1",
-    "gemini_api_1",
-    "anthropic_api_1",
-    "chatgpt_web_1",
-    "kimi_web_1",
-  ]);
+  const [selectedModels, setSelectedModels] = useState<string[]>([]);
+  const [availableModels, setAvailableModels] = useState<ProviderInfo[]>(FALLBACK_MODELS);
   const abortRef = useRef<AbortController | null>(null);
+
+  // Fetch provider list from backend on mount
+  useEffect(() => {
+    fetchProviders().then((list) => {
+      if (list.length > 0) {
+        setAvailableModels(list);
+        // Auto-select API providers by default
+        setSelectedModels(list.filter((m) => m.api).map((m) => m.id));
+      } else {
+        setAvailableModels(FALLBACK_MODELS);
+        setSelectedModels(FALLBACK_MODELS.filter((m) => m.api).map((m) => m.id));
+      }
+    });
+  }, []);
 
   const toggleModel = (id: string) => {
     setSelectedModels((prev) =>
@@ -90,11 +106,11 @@ export default function Page() {
   };
 
   const selectOnlyAPI = () => {
-    setSelectedModels(["openai_api_1", "gemini_api_1", "anthropic_api_1", "qwen_api_1"]);
+    setSelectedModels(availableModels.filter((m) => m.api).map((m) => m.id));
   };
 
   const selectAllModels = () => {
-    setSelectedModels(AVAILABLE_MODELS.map((m) => m.id));
+    setSelectedModels(availableModels.map((m) => m.id));
   };
 
   const toggleExpand = useCallback((key: string) => {
@@ -151,20 +167,29 @@ export default function Page() {
       const next = { ...prev };
       const cur = next[key] ?? { key, status: "running" as NodeStatus };
       if (ev.provider) cur.provider = ev.provider;
-      if (ev.type === "step_started") {
+      if (ev.label) cur.label = ev.label;
+      if (ev.model) cur.model = ev.model;
+      if (ev.type === "step_queued") {
         cur.status = "running";
+        cur.queuedPosition = ev.position;
+        cur.content = `⏳ 当前目标模型账号忙碌中，正在排队等待空闲账号（队列第 ${ev.position ?? 1} 位）...`;
+      } else if (ev.type === "step_started") {
+        cur.status = "running";
+        cur.queuedPosition = undefined;
       } else if (ev.type === "step_chunk") {
         cur.status = "running";
+        cur.queuedPosition = undefined;
         let text = cur.content || "";
         // Clear warmup/transition placeholders on first real chunk
-        if (text.startsWith("⚡ 正在同时拉起") || text.startsWith("🔄 正在切换")) {
+        if (text.startsWith("⚡ 正在同时拉起") || text.startsWith("🔄 正在切换") || text.startsWith("⏳ 当前目标模型账号忙碌")) {
           text = "";
         }
         cur.content = text + (ev.delta || "");
       } else if (ev.type === "step_succeeded") {
         cur.status = "succeeded";
+        cur.queuedPosition = undefined;
         let text = ev.content ?? cur.content ?? "";
-        if (text.startsWith("⚡ 正在同时拉起") || text.startsWith("🔄 正在切换")) text = "";
+        if (text.startsWith("⚡ 正在同时拉起") || text.startsWith("🔄 正在切换") || text.startsWith("⏳ 当前目标模型账号忙碌")) text = "";
         cur.content = text;
       } else if (ev.type === "step_failed") {
         cur.status = "failed";
@@ -185,6 +210,10 @@ export default function Page() {
         const rt = { ...(cur.runnerupTyping || {}) };
         rt[ev.provider] = false;
         cur.runnerupTyping = rt;
+        // Store runnerup label
+        const rl = { ...(cur.runnerupLabels || {}) };
+        if (ev.label) rl[ev.provider] = ev.label;
+        cur.runnerupLabels = rl;
       }
       next[key] = { ...cur };
       return next;
@@ -339,7 +368,7 @@ export default function Page() {
             </div>
           </div>
           <div className="model-select-grid">
-            {AVAILABLE_MODELS.map((m) => {
+            {availableModels.map((m) => {
               const checked = selectedModels.includes(m.id);
               return (
                 <label
@@ -352,8 +381,8 @@ export default function Page() {
                     onChange={() => toggleModel(m.id)}
                     disabled={running}
                   />
-                  <AgentLogo provider={m.provider} size={16} />
-                  <span>{m.label}</span>
+                  <AgentLogo provider={m.site} size={16} />
+                  <span>{m.label}{m.model ? ` (${m.model})` : ""}</span>
                   <span className={`model-badge-tag ${m.api ? "api" : "web"}`}>{m.api ? "API" : "Web"}</span>
                 </label>
               );
@@ -474,8 +503,9 @@ export default function Page() {
               const isLast = idx === order.length - 1;
               const open = expandedKeys[key] !== undefined ? expandedKeys[key] : isLast;
               const hasRunnerups = n.runnerups && Object.keys(n.runnerups).length > 0;
-              const isWinnerTyping = n.status === "running" && n.content && !n.content.startsWith("⚡") && !n.content.startsWith("🔄");
-              const isTransitioning = n.status === "running" && n.content && n.content.startsWith("🔄");
+              const isQueued = n.status === "running" && n.queuedPosition !== undefined;
+              const isWinnerTyping = n.status === "running" && n.content && !n.content.startsWith("⚡") && !n.content.startsWith("🔄") && !n.content.startsWith("⏳");
+              const isTransitioning = n.status === "running" && n.content && (n.content.startsWith("🔄") || n.content.startsWith("⏳"));
 
               return (
                 <div key={key} className={`node ${n.status}`}>
@@ -490,14 +520,15 @@ export default function Page() {
                       {n.provider && (
                         <div className="provider-tag">
                           <AgentLogo provider={n.provider} size={16} />
-                          <span>{n.provider}</span>
+                          <span>{n.label || n.provider}</span>
+                          {n.model && <span style={{ fontSize: "10px", color: "var(--muted)", fontFamily: "var(--mono)" }}>({n.model})</span>}
                         </div>
                       )}
                       {n.status === "succeeded" && n.provider && hasRunnerups && (
                         <span className="winner-crown">🏆 最快</span>
                       )}
                       <span className="badge">
-                        {n.status === "running" && isWinnerTyping ? "打字中..." : BADGE[n.status]}
+                        {isQueued ? `⏳ 排队中 (${n.queuedPosition}位)` : n.status === "running" && isWinnerTyping ? "打字中..." : BADGE[n.status]}
                       </span>
                       {hasRunnerups && (
                         <span style={{ fontSize: "11px", color: "var(--accent)", fontFamily: "var(--mono)", fontWeight: 600 }}>
@@ -509,7 +540,7 @@ export default function Page() {
                       </span>
                     </div>
 
-                    {/* Step transition animation */}
+                    {/* Step transition animation / queuing animation */}
                     {open && isTransitioning && (
                       <div className="body">
                         <div className="step-transition-card">
@@ -526,7 +557,8 @@ export default function Page() {
                         <div className={`race-lane-card is-winner ${isWinnerTyping ? "is-typing" : ""}`}>
                           <div className="race-lane-header">
                             {n.provider && <AgentLogo provider={n.provider} size={14} />}
-                            <span style={{ color: "#facc15" }}>{n.provider || "模型"}</span>
+                            <span className="winner-title">{n.label || n.provider || "模型"}</span>
+                            {n.model && <span style={{ fontSize: "10px", color: "var(--muted)", fontFamily: "var(--mono)" }}>({n.model})</span>}
                             {n.status === "succeeded" && <span className="winner-crown">🏆 最快锁定</span>}
                             {isWinnerTyping && (
                               <div className="lane-typing-dots">
@@ -549,7 +581,7 @@ export default function Page() {
                                 <div key={rProvider} className={`race-lane-card ${isRTyping ? "is-typing" : ""}`}>
                                   <div className="race-lane-header">
                                     <AgentLogo provider={rProvider} size={14} />
-                                    <span>{rProvider}</span>
+                                    <span>{n.runnerupLabels?.[rProvider] || rProvider}</span>
                                     {!isRTyping && <span style={{ fontSize: "10px", color: "var(--success)", fontFamily: "var(--mono)", fontWeight: 700 }}>✓ 完成</span>}
                                     {isRTyping && (
                                       <div className="lane-typing-dots">

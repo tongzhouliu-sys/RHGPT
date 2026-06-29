@@ -26,9 +26,10 @@ def _extract(data: dict) -> str:
 
 
 def run(profile: str, prompt: str, *, timeout_ms: int = 120000, **options) -> str:
-    key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
+    api_key_env = options.get("api_key_env") or "GEMINI_API_KEY"
+    key = os.environ.get(api_key_env) or os.environ.get("GOOGLE_API_KEY")
     if not key:
-        raise ProviderError(profile, "GEMINI_API_KEY / GOOGLE_API_KEY not set")
+        raise ProviderError(profile, f"{api_key_env} / GOOGLE_API_KEY not set")
     model = options.get("model") or os.environ.get("GEMINI_MODEL", _DEFAULT_MODEL)
 
     import requests

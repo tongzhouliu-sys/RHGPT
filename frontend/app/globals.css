@@ -18,28 +18,50 @@
   --warn: #fbbf24;
   --input-bg: rgba(11, 19, 41, 0.85);
   --card-head-bg: rgba(15, 23, 42, 0.6);
+  --box-subtle-bg: rgba(15, 23, 42, 0.45);
+  --ghost-btn-bg: rgba(15, 23, 42, 0.4);
+  --track-bg: rgba(15, 23, 42, 0.6);
+  --lane-bg: rgba(15, 23, 42, 0.5);
+  --code-block-bg: #0b1329;
+  --winner-text: #facc15;
+  --winner-bg: linear-gradient(135deg, rgba(250, 204, 21, 0.2), rgba(245, 158, 11, 0.15));
+  --winner-border: rgba(250, 204, 21, 0.4);
+  --grad-spot1: rgba(56, 189, 248, 0.35);
+  --grad-spot2: rgba(168, 85, 247, 0.35);
+  --grad-spot3: rgba(15, 23, 42, 0.5);
   --sans: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif;
   --mono: 'JetBrains Mono', ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
 
 [data-theme="light"] {
-  --bg: #f1f5f9;
-  --panel: rgba(255, 255, 255, 0.9);
+  --bg: #f8fafc;
+  --panel: rgba(255, 255, 255, 0.85);
   --panel-solid: #ffffff;
-  --panel-hover: rgba(248, 250, 252, 0.95);
-  --border: rgba(203, 213, 225, 0.8);
-  --border-bright: rgba(2, 132, 199, 0.6);
+  --panel-hover: rgba(241, 245, 249, 0.95);
+  --border: rgba(203, 213, 225, 0.7);
+  --border-bright: rgba(2, 132, 199, 0.45);
   --text: #0f172a;
   --muted: #64748b;
   --accent: #0284c7;
-  --accent-glow: rgba(2, 132, 199, 0.25);
-  --purple-glow: rgba(147, 51, 234, 0.18);
+  --accent-glow: rgba(2, 132, 199, 0.18);
+  --purple-glow: rgba(147, 51, 234, 0.15);
   --success: #059669;
-  --success-glow: rgba(5, 150, 105, 0.2);
+  --success-glow: rgba(5, 150, 105, 0.18);
   --danger: #dc2626;
   --warn: #d97706;
-  --input-bg: rgba(255, 255, 255, 0.95);
-  --card-head-bg: rgba(241, 245, 249, 0.9);
+  --input-bg: rgba(255, 255, 255, 0.9);
+  --card-head-bg: rgba(248, 250, 252, 0.95);
+  --box-subtle-bg: rgba(241, 245, 249, 0.75);
+  --ghost-btn-bg: rgba(241, 245, 249, 0.85);
+  --track-bg: rgba(226, 232, 240, 0.8);
+  --lane-bg: rgba(255, 255, 255, 0.85);
+  --code-block-bg: #f1f5f9;
+  --winner-text: #b45309;
+  --winner-bg: linear-gradient(135deg, rgba(254, 243, 199, 0.9), rgba(253, 230, 138, 0.75));
+  --winner-border: rgba(245, 158, 11, 0.5);
+  --grad-spot1: rgba(56, 189, 248, 0.14);
+  --grad-spot2: rgba(168, 85, 247, 0.12);
+  --grad-spot3: rgba(224, 242, 254, 0.45);
 }
 
 * { box-sizing: border-box; }
@@ -49,9 +71,9 @@ html, body {
   padding: 0;
   background: var(--bg);
   background-image: 
-    radial-gradient(at 10% 10%, var(--accent-glow) 0px, transparent 45%),
-    radial-gradient(at 90% 90%, var(--purple-glow) 0px, transparent 45%),
-    radial-gradient(at 50% 50%, rgba(15, 23, 42, 0.5) 0px, transparent 100%);
+    radial-gradient(at 10% 10%, var(--grad-spot1) 0px, transparent 45%),
+    radial-gradient(at 90% 90%, var(--grad-spot2) 0px, transparent 45%),
+    radial-gradient(at 50% 50%, var(--grad-spot3) 0px, transparent 100%);
   background-attachment: fixed;
   color: var(--text);
   font-family: var(--sans);
@@ -219,7 +241,7 @@ button:disabled {
   filter: none; 
 }
 button.ghost { 
-  background: rgba(15, 23, 42, 0.4); 
+  background: var(--ghost-btn-bg); 
   color: var(--text); 
   border: 1px solid var(--border); 
   box-shadow: none;
@@ -234,7 +256,7 @@ button.ghost:hover {
 /* ── Model Selection Grid & Pills (Ultra-Compact Sleek Micro-Chips) ── */
 .model-select-wrapper {
   margin-top: 14px;
-  background: rgba(15, 23, 42, 0.45);
+  background: var(--box-subtle-bg);
   border: 1px solid var(--border);
   border-radius: 14px;
   padding: 12px 14px;
@@ -357,7 +379,7 @@ button.ghost:hover {
 .progress-track {
   width: 100%;
   height: 8px;
-  background: rgba(15, 23, 42, 0.6);
+  background: var(--track-bg);
   border: 1px solid var(--border);
   border-radius: 99px;
   overflow: hidden;
@@ -431,7 +453,7 @@ button.ghost:hover {
 .md { font-size: 15px; line-height: 1.75; color: var(--text); }
 .md h1, .md h2, .md h3, .md h4 { line-height: 1.35; margin: 24px 0 12px; color: var(--text); font-weight: 700; }
 .md code { font-family: var(--mono); font-size: 0.9em; background: rgba(125,125,125,0.12); border: 1px solid var(--border); border-radius: 6px; padding: 2px 7px; }
-.md pre { background: var(--panel-solid); border: 1px solid var(--border); border-radius: 12px; padding: 18px; overflow-x: auto; box-shadow: inset 0 2px 6px rgba(0,0,0,0.2); }
+.md pre { background: var(--code-block-bg); border: 1px solid var(--border); border-radius: 12px; padding: 18px; overflow-x: auto; box-shadow: inset 0 2px 6px rgba(0,0,0,0.1); }
 .md pre code { border: none; background: none; padding: 0; }
 
 /* ── Typing Cursor Animation ── */
@@ -464,7 +486,7 @@ button.ghost:hover {
 
 .race-lane-card {
   position: relative;
-  background: rgba(15, 23, 42, 0.5);
+  background: var(--lane-bg);
   border: 1px solid var(--border);
   border-radius: 14px;
   overflow: hidden;
@@ -475,8 +497,8 @@ button.ghost:hover {
   border-color: var(--border-bright);
 }
 .race-lane-card.is-winner {
-  border-color: rgba(250, 204, 21, 0.5);
-  box-shadow: 0 0 20px rgba(250, 204, 21, 0.08);
+  border-color: var(--winner-border);
+  box-shadow: 0 0 20px var(--accent-glow);
 }
 .race-lane-card.is-typing {
   border-color: var(--accent);
@@ -495,7 +517,7 @@ button.ghost:hover {
   transition: background 0.3s ease;
 }
 .race-lane-card.is-winner::before {
-  background: linear-gradient(180deg, #facc15, #f59e0b);
+  background: linear-gradient(180deg, var(--accent), #f59e0b);
 }
 .race-lane-card.is-typing::before {
   background: var(--accent);
@@ -524,7 +546,11 @@ button.ghost:hover {
   line-height: 1.65;
 }
 
-/* ── Winner Crown Badge ── */
+/* ── Winner Crown Badge & Title ── */
+.winner-title {
+  color: var(--winner-text);
+  font-weight: 700;
+}
 .winner-crown {
   display: inline-flex;
   align-items: center;
@@ -534,9 +560,9 @@ button.ghost:hover {
   font-weight: 800;
   padding: 2px 8px;
   border-radius: 6px;
-  background: linear-gradient(135deg, rgba(250, 204, 21, 0.2), rgba(245, 158, 11, 0.15));
-  color: #facc15;
-  border: 1px solid rgba(250, 204, 21, 0.4);
+  background: var(--winner-bg);
+  color: var(--winner-text);
+  border: 1px solid var(--winner-border);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -677,7 +703,7 @@ button.ghost:hover {
   gap: 12px;
   padding: 10px 12px;
   border-radius: 10px;
-  background: rgba(125, 125, 125, 0.05);
+  background: var(--ghost-btn-bg);
   border: 1px solid var(--border);
 }
 .probe-popover-info { display: flex; flex-direction: column; flex: 1; }
@@ -694,7 +720,7 @@ button.ghost:hover {
   margin-top: 28px;
   position: relative;
   overflow: hidden;
-  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.15);
   animation: fadeInUp 0.4s ease-out forwards;
 }
 .office-header {
@@ -710,7 +736,7 @@ button.ghost:hover {
   text-transform: uppercase;
 }
 .office-room {
-  background: rgba(0, 0, 0, 0.06);
+  background: var(--box-subtle-bg);
   border: 2px dashed var(--border);
   border-radius: 18px;
   min-height: 220px;
@@ -843,16 +869,32 @@ button.ghost:hover {
 .typing-dot:nth-child(3) { animation-delay: 0.4s; }
 @keyframes typingDot { 0%,100%{ transform: translateY(0); opacity: 0.3; } 50%{ transform: translateY(-5px); opacity: 1; } }
 
-/* ── Mobile & Responsive Adaptation (手机端深度适配) ── */
+/* ── Custom Sleek Scrollbars ── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-bright);
+  border-radius: 99px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent);
+}
+
+/* ── Mobile & Responsive Adaptation (手机端深度适配与美化) ── */
 @media (max-width: 768px) {
   .wrap {
-    padding: 16px 10px 80px;
+    padding: 16px 12px 80px;
   }
 
   .masthead {
     flex-direction: column;
     align-items: flex-start;
-    gap: 12px;
+    gap: 14px;
   }
 
   .masthead-actions {
@@ -862,12 +904,18 @@ button.ghost:hover {
   }
 
   .brand-row h1 {
-    font-size: 22px;
+    font-size: 20px;
+  }
+
+  .probe-popover {
+    right: -10px;
+    width: min(320px, calc(100vw - 32px));
+    top: 48px;
   }
 
   .panel {
-    padding: 14px 12px;
-    border-radius: 14px;
+    padding: 16px 14px;
+    border-radius: 16px;
   }
 
   textarea {
@@ -879,26 +927,27 @@ button.ghost:hover {
   .controls {
     flex-direction: column;
     align-items: stretch;
-    gap: 10px;
+    gap: 12px;
   }
 
   .controls button {
     width: 100%;
     justify-content: center;
-    padding: 12px 16px;
-    font-size: 13px;
+    padding: 13px 16px;
+    font-size: 14px;
+    min-height: 44px;
   }
 
   /* Model selection grid */
   .model-select-wrapper {
-    padding: 10px;
+    padding: 12px 10px;
     border-radius: 12px;
   }
 
   .model-select-header {
     flex-direction: column;
     align-items: flex-start;
-    gap: 8px;
+    gap: 10px;
   }
 
   .model-select-header > div {
@@ -907,20 +956,21 @@ button.ghost:hover {
   }
 
   .model-select-grid {
-    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-    gap: 5px;
+    grid-template-columns: repeat(auto-fill, minmax(135px, 1fr));
+    gap: 6px;
   }
 
   .model-pill {
-    padding: 5px 8px;
+    padding: 6px 8px;
     font-size: 11px;
-    border-radius: 6px;
-    gap: 4px;
+    border-radius: 8px;
+    gap: 5px;
+    min-height: 36px;
   }
 
   .model-pill input[type="checkbox"] {
-    width: 12px;
-    height: 12px;
+    width: 13px;
+    height: 13px;
   }
 
   .model-badge-tag {
@@ -930,7 +980,7 @@ button.ghost:hover {
 
   /* Progress banner */
   .progress-banner-card {
-    padding: 14px 12px;
+    padding: 16px 14px;
     margin-top: 20px;
     border-radius: 14px;
   }
@@ -951,6 +1001,7 @@ button.ghost:hover {
 
   .progress-tips-row {
     font-size: 11px;
+    line-height: 1.5;
   }
 
   /* Status line */
@@ -962,41 +1013,41 @@ button.ghost:hover {
 
   /* Relay timeline */
   .relay {
-    padding-left: 20px;
-    margin-top: 16px;
+    padding-left: 22px;
+    margin-top: 18px;
   }
 
   .relay::before {
-    left: 7px;
+    left: 8px;
   }
 
   .node {
-    margin-bottom: 16px;
+    margin-bottom: 18px;
   }
 
   .node::before {
-    left: -20px;
-    width: 12px;
-    height: 12px;
+    left: -22px;
+    width: 13px;
+    height: 13px;
     border-width: 2px;
   }
 
   /* Card header */
   .card .head {
-    padding: 10px 12px;
+    padding: 12px 14px;
     flex-wrap: wrap;
-    gap: 6px;
+    gap: 8px;
   }
 
   .card .key {
-    font-size: 14px;
+    font-size: 15px;
   }
 
   .card .provider-tag {
-    font-size: 10px;
-    padding: 3px 8px;
+    font-size: 11px;
+    padding: 4px 10px;
     border-radius: 8px;
-    gap: 4px;
+    gap: 5px;
   }
 
   .card .badge {
@@ -1006,22 +1057,22 @@ button.ghost:hover {
 
   .winner-crown {
     font-size: 9px;
-    padding: 1px 6px;
+    padding: 2px 6px;
   }
 
   /* Card body */
   .card .body {
-    padding: 12px 10px;
+    padding: 14px 12px;
   }
 
   .card {
-    border-radius: 14px;
+    border-radius: 16px;
   }
 
   /* Race lane cards — mobile stack */
   .race-lanes {
-    gap: 8px;
-    margin-top: 10px;
+    gap: 10px;
+    margin-top: 12px;
   }
 
   .race-lanes.has-multiple {
@@ -1029,46 +1080,46 @@ button.ghost:hover {
   }
 
   .race-lane-card {
-    border-radius: 10px;
+    border-radius: 12px;
   }
 
   .race-lane-header {
-    padding: 8px 10px;
-    font-size: 11px;
+    padding: 9px 12px;
+    font-size: 12px;
     gap: 6px;
   }
 
   .race-lane-body {
-    padding: 10px 12px;
-    max-height: 220px;
+    padding: 12px 14px;
+    max-height: 260px;
   }
 
   .race-lane-body .md {
     font-size: 13px;
-    line-height: 1.55;
+    line-height: 1.6;
   }
 
   /* Step transition card */
   .step-transition-card {
-    padding: 10px 14px;
+    padding: 12px 14px;
     font-size: 12px;
     gap: 8px;
-    border-radius: 10px;
+    border-radius: 12px;
   }
 
   .step-transition-spinner {
-    width: 14px;
-    height: 14px;
+    width: 16px;
+    height: 16px;
   }
 
   /* Markdown content */
   .md {
     font-size: 14px;
-    line-height: 1.6;
+    line-height: 1.65;
   }
 
   .md pre {
-    padding: 12px;
+    padding: 12px 14px;
     border-radius: 10px;
     font-size: 12px;
   }
@@ -1085,16 +1136,37 @@ button.ghost:hover {
     border-radius: 10px;
   }
 
-  /* Office scene */
+  /* Office scene mobile adaptation */
+  .office-scene-container {
+    padding: 16px 12px;
+    border-radius: 18px;
+    margin-top: 20px;
+  }
+  .office-header {
+    font-size: 11px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
   .office-room {
-    padding: 12px;
-    min-height: 160px;
+    padding: 16px 8px;
+    min-height: 180px;
+  }
+
+  .messenger-runner.running {
+    left: calc(100% - 110px);
   }
 
   .office-bubble {
-    max-width: 160px;
+    max-width: 140px;
     font-size: 10px;
-    padding: 5px 8px;
+    padding: 6px 10px;
+    border-radius: 12px;
+  }
+
+  .avatar-character {
+    font-size: 32px;
   }
 
   /* Export panel */
@@ -1105,30 +1177,30 @@ button.ghost:hover {
 
 @media (max-width: 480px) {
   .wrap {
-    padding: 12px 8px 80px;
+    padding: 12px 8px 70px;
   }
 
   .brand-row h1 {
-    font-size: 18px;
+    font-size: 17px;
   }
 
   .model-select-grid {
-    grid-template-columns: 1fr;
-    gap: 4px;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
   }
 
   .model-pill {
-    padding: 5px 7px;
+    padding: 5px 6px;
     font-size: 10px;
   }
 
   .card .head {
-    padding: 8px 10px;
-    gap: 5px;
+    padding: 10px 10px;
+    gap: 6px;
   }
 
   .card .key {
-    font-size: 13px;
+    font-size: 14px;
   }
 
   .card .body {
@@ -1136,8 +1208,8 @@ button.ghost:hover {
   }
 
   .race-lane-body {
-    max-height: 180px;
-    padding: 8px 10px;
+    max-height: 220px;
+    padding: 10px 10px;
   }
 
   .race-lane-body .md {
@@ -1145,12 +1217,12 @@ button.ghost:hover {
   }
 
   .race-lane-header {
-    padding: 6px 8px;
-    font-size: 10px;
+    padding: 8px 10px;
+    font-size: 11px;
   }
 
   .progress-banner-card {
-    padding: 10px 8px;
+    padding: 12px 10px;
     border-radius: 12px;
   }
 
@@ -1159,16 +1231,16 @@ button.ghost:hover {
   }
 
   .relay {
-    padding-left: 16px;
+    padding-left: 18px;
   }
 
   .relay::before {
-    left: 5px;
+    left: 6px;
   }
 
   .node::before {
-    left: -16px;
-    width: 10px;
-    height: 10px;
+    left: -18px;
+    width: 11px;
+    height: 11px;
   }
 }

@@ -16,9 +16,10 @@ _DEFAULT_BASE_URL = "https://api.anthropic.com"
 
 
 def run(profile: str, prompt: str, *, timeout_ms: int = 120000, **options) -> str:
-    key = options.get("api_key") or os.environ.get("ANTHROPIC_API_KEY")
+    api_key_env = options.get("api_key_env") or "ANTHROPIC_API_KEY"
+    key = options.get("api_key") or os.environ.get(api_key_env)
     if not key:
-        raise ProviderError(profile, "ANTHROPIC_API_KEY not set")
+        raise ProviderError(profile, f"{api_key_env} not set")
 
     base_url = (options.get("base_url") or os.environ.get("ANTHROPIC_BASE_URL") or _DEFAULT_BASE_URL).rstrip("/")
     model = options.get("model") or os.environ.get("ANTHROPIC_MODEL", _DEFAULT_MODEL)

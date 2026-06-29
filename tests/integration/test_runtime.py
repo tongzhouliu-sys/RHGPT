@@ -38,6 +38,8 @@ class RuntimeITBase(unittest.TestCase):
         # Silence the runtime's structured WARNING/ERROR logs (expire/flaky
         # tests deliberately trigger them); we assert on metrics/events, not logs.
         logging.getLogger().setLevel(logging.CRITICAL)
+        from src.account_pool import AccountPoolManager
+        AccountPoolManager.reset_instance()
         self.builder = PromptBuilder(FIX_PROMPTS)
         self.manager = ProviderManager(config_path=FIX_CFG, provider_package=PKG)
 

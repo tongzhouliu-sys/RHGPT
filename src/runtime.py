@@ -90,30 +90,48 @@ def _run_step_with_retry(
     *,
     job_id: Optional[str] = None,
     on_chunk: Optional[Callable[[str], None]] = None,
+    on_queue: Optional[Callable[[int], None]] = None,
     is_cancelled: Optional[Callable[[], bool]] = None,
     sleep: Callable[[float], None] = time.sleep,
 ) -> dict:
-    """Run one step. Classify failures:
+    """Run one step with AccountPoolManager integration:
 
-      SessionExpiredError -> fatal: no retry, error.type 'session_expired'.
-      any other Exception -> transient: retry up to conf['retries'] with
-                             exponential backoff, then error.type 'transient'.
+      - Acquires an idle/healthy account slot (queuing if busy).
+      - Executes the provider under its profile lock.
+      - If SessionExpiredError occurs, marks account EXPIRED and automatically
+        fails over to another idle account for the same site (if available).
     """
     attempt = 0
     started = _now_iso()
-    site = conf.get("site")
+    site = conf.get("site", provider_name)
+    pool = manager.get_pool()
+    current_target = provider_name
+
     while True:
         if is_cancelled and is_cancelled():
             return _fail("cancelled", "job was cancelled by user", attempt, started)
         attempt += 1
+
+        slot, acquire_err = pool.acquire_account(
+            current_target,
+            timeout_ms=conf.get("timeout_ms", 120000),
+            on_queue=on_queue,
+            is_cancelled=is_cancelled,
+        )
+        if not slot:
+            etype = "session_expired" if "expired" in (acquire_err or "") else "transient"
+            return _fail(etype, acquire_err or "account acquire failed", attempt, started)
+
+        active_provider = slot.provider_name
+        active_conf = manager.resolve(active_provider)
+
         try:
-            lock = _lock_for(conf["profile"])  # [修正-8] serialize per profile
+            lock = _lock_for(active_conf["profile"])  # [修正-8] serialize per profile
             with lock:
-                content = manager.run(provider_name, prompt, on_chunk=on_chunk)
+                content = manager.run(active_provider, prompt, on_chunk=on_chunk)
             if content is None or content == "":
-                # Contract: providers must return non-empty text. Treat empty as
-                # transient so it benefits from retry rather than silently passing.
                 raise RuntimeError("provider returned empty content")
+            pool.release_account(active_provider)
             return {
                 "status": "succeeded",
                 "content": content,
@@ -121,22 +139,30 @@ def _run_step_with_retry(
                 "started_at": started,
                 "finished_at": _now_iso(),
                 "error": None,
+                "provider": active_provider,
+                "conf": active_conf,
             }
         except SessionExpiredError as e:
-            metrics.inc(M_SESSION_EXPIRED_TOTAL, provider=provider_name)
+            pool.mark_expired(active_provider)
+            metrics.inc(M_SESSION_EXPIRED_TOTAL, provider=active_provider)
             log_event(
                 _log,
-                "step_session_expired",
+                "step_session_expired_auto_failover_attempt",
                 level=logging.WARNING,
                 job_id=job_id,
                 step_key=key,
-                provider=provider_name,
+                provider=active_provider,
                 site=site,
                 attempt=attempt,
-                error_type="session_expired",
             )
-            return _fail("session_expired", str(e), attempt, started)
+            # Try switching target to site for next iteration to pick another healthy account
+            current_target = site
+            # If maximum retries exceeded for session expiry failover, fail closed
+            if attempt > conf.get("retries", 2) * 2:
+                return _fail("session_expired", str(e), attempt, started)
+            sleep(0.5)
         except Exception as e:  # transient class (incl. GenerationTimeout)
+            pool.release_account(active_provider)
             if attempt > conf["retries"]:
                 log_event(
                     _log,
@@ -144,20 +170,20 @@ def _run_step_with_retry(
                     level=logging.ERROR,
                     job_id=job_id,
                     step_key=key,
-                    provider=provider_name,
+                    provider=active_provider,
                     site=site,
                     attempt=attempt,
                     error_type="transient",
                 )
                 return _fail("transient", str(e), attempt, started)
-            metrics.inc(M_STEP_RETRIES_TOTAL, provider=provider_name)
+            metrics.inc(M_STEP_RETRIES_TOTAL, provider=active_provider)
             log_event(
                 _log,
                 "step_retry",
                 level=logging.WARNING,
                 job_id=job_id,
                 step_key=key,
-                provider=provider_name,
+                provider=active_provider,
                 site=site,
                 attempt=attempt,
                 error_type="transient",
@@ -211,6 +237,14 @@ def run_pipeline(
         ev["seq"] = seq
         emit(ev)
 
+    def _pm(pname: str, resolved: dict) -> dict:
+        """Provider metadata dict for SSE events (label + model)."""
+        return {
+            "provider": pname,
+            "label": resolved.get("label", pname),
+            "model": resolved.get("model"),
+        }
+
     log_event(_log, "pipeline_started", job_id=job_id)
 
     for index, step in enumerate(config["steps"]):
@@ -245,10 +279,13 @@ def run_pipeline(
                 provider=provider_name,
                 site=conf.get("site"),
             )
-            push({"type": "step_started", "key": key, "provider": provider_name})
+            push({"type": "step_started", "key": key, **_pm(provider_name, conf)})
 
             def handle_chunk(delta: str) -> None:
                 push({"type": "step_chunk", "key": key, "provider": provider_name, "delta": delta})
+
+            def handle_queue(pos: int) -> None:
+                push({"type": "step_queued", "key": key, "position": pos, **_pm(provider_name, conf)})
 
             result = _run_step_with_retry(
                 manager,
@@ -258,13 +295,18 @@ def run_pipeline(
                 key,
                 job_id=job_id,
                 on_chunk=handle_chunk,
+                on_queue=handle_queue,
                 is_cancelled=is_cancelled,
             )
+            if result.get("provider"):
+                provider_name = result["provider"]
+                conf = result.get("conf") or manager.resolve(provider_name)
         else:
             # Multi-provider race-to-first mode (首 Token 获胜锁)
             race_state = {"winner": None, "lock": threading.Lock()}
-            log_event(_log, "step_started", job_id=job_id, step_key=key, provider=provider_list[0], site=manager.resolve(provider_list[0]).get("site"))
-            push({"type": "step_started", "key": key, "provider": provider_list[0]})
+            _first_conf = manager.resolve(provider_list[0])
+            log_event(_log, "step_started", job_id=job_id, step_key=key, provider=provider_list[0], site=_first_conf.get("site"))
+            push({"type": "step_started", "key": key, **_pm(provider_list[0], _first_conf)})
             push({"type": "step_chunk", "key": key, "provider": provider_list[0], "delta": f"⚡ 正在同时拉起 {len(provider_list)} 个模型并发竞速赛马中，首 Token 吐字即刻锁定...\n\n"})
 
             def run_candidate(candidate_name: str) -> dict:
@@ -275,24 +317,29 @@ def run_pipeline(
                         if race_state["winner"] is None:
                             race_state["winner"] = candidate_name
                             log_event(_log, "step_started", job_id=job_id, step_key=key, provider=candidate_name, site=c_conf.get("site"))
-                            push({"type": "step_started", "key": key, "provider": candidate_name})
+                            push({"type": "step_started", "key": key, **_pm(candidate_name, c_conf)})
                         if race_state["winner"] == candidate_name:
                             push({"type": "step_chunk", "key": key, "provider": candidate_name, "delta": delta})
                         else:
                             push({"type": "runnerup_chunk", "key": key, "provider": candidate_name, "delta": delta})
 
+                def candidate_queue(pos: int) -> None:
+                    push({"type": "step_queued", "key": key, "position": pos, **_pm(candidate_name, c_conf)})
+
                 res = _run_step_with_retry(
-                    manager, candidate_name, prompt_text, c_conf, key, job_id=job_id, on_chunk=candidate_chunk, is_cancelled=is_cancelled
+                    manager, candidate_name, prompt_text, c_conf, key, job_id=job_id, on_chunk=candidate_chunk, on_queue=candidate_queue, is_cancelled=is_cancelled
                 )
+                actual_cand_provider = res.get("provider", candidate_name)
+                actual_cand_conf = res.get("conf", c_conf)
                 if res["status"] == "succeeded":
                     with race_state["lock"]:
                         if race_state["winner"] is None:
-                            race_state["winner"] = candidate_name
-                            log_event(_log, "step_started", job_id=job_id, step_key=key, provider=candidate_name, site=c_conf.get("site"))
-                            push({"type": "step_started", "key": key, "provider": candidate_name})
-                        elif race_state["winner"] != candidate_name:
-                            push({"type": "runnerup_succeeded", "key": key, "provider": candidate_name, "content": res["content"]})
-                return {"provider": candidate_name, "result": res, "conf": c_conf}
+                            race_state["winner"] = actual_cand_provider
+                            log_event(_log, "step_started", job_id=job_id, step_key=key, provider=actual_cand_provider, site=actual_cand_conf.get("site"))
+                            push({"type": "step_started", "key": key, **_pm(actual_cand_provider, actual_cand_conf)})
+                        elif race_state["winner"] != actual_cand_provider:
+                            push({"type": "runnerup_succeeded", "key": key, "provider": actual_cand_provider, "label": actual_cand_conf.get("label", actual_cand_provider), "model": actual_cand_conf.get("model"), "content": res["content"]})
+                return {"provider": actual_cand_provider, "result": res, "conf": actual_cand_conf}
 
             from concurrent.futures import ThreadPoolExecutor, as_completed
             with ThreadPoolExecutor(max_workers=len(provider_list)) as race_executor:
@@ -352,7 +399,7 @@ def run_pipeline(
                 {
                     "type": "step_succeeded",
                     "key": key,
-                    "provider": provider_name,
+                    **_pm(provider_name, conf),
                     "content": result["content"],
                 }
             )
@@ -369,7 +416,7 @@ def run_pipeline(
                 {
                     "type": "step_failed",
                     "key": key,
-                    "provider": provider_name,
+                    **_pm(provider_name, conf),
                     "error": result["error"],
                 }
             )

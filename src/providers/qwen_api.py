@@ -22,9 +22,10 @@ def _extract(data: dict) -> str:
 
 
 def run(profile: str, prompt: str, *, timeout_ms: int = 120000, **options) -> str:
-    key = os.environ.get("DASHSCOPE_API_KEY") or os.environ.get("QWEN_API_KEY")
+    api_key_env = options.get("api_key_env") or "DASHSCOPE_API_KEY"
+    key = os.environ.get(api_key_env) or os.environ.get("QWEN_API_KEY")
     if not key:
-        raise ProviderError(profile, "DASHSCOPE_API_KEY / QWEN_API_KEY not set")
+        raise ProviderError(profile, f"{api_key_env} / QWEN_API_KEY not set")
     model = options.get("model") or os.environ.get("QWEN_MODEL", _DEFAULT_MODEL)
 
     import requests

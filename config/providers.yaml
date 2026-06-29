@@ -44,21 +44,35 @@ providers:
     profile: data/profiles/gemini_acc1
 
   # --- Official-API Providers (profile empty; API key via env, §9.3) ---------
+  # New optional fields (backward compatible — omit to keep original behaviour):
+  #   model:       actual model ID sent to the API (overrides env default)
+  #   label:       human-readable display name for frontend / SSE events
+  #   base_url:    override the provider's default API endpoint
+  #   api_key_env: env-var name holding the API key (e.g. "ONEAPI_KEY")
+
   gemini_api_1:
     site: gemini_api
     profile: ""
+    model: gemini-2.5-flash
+    label: "Gemini 2.5 Flash"
 
   qwen_api_1:
     site: qwen_api
     profile: ""
+    model: qwen-plus
+    label: "Qwen Plus"
 
   openai_api_1:
     site: openai_api
     profile: ""
+    model: gpt-4o-mini
+    label: "GPT-4o Mini"
 
   anthropic_api_1:
     site: anthropic_api
     profile: ""
+    model: claude-3-5-sonnet-20241022
+    label: "Claude 3.5 Sonnet"
 
   # --- M1 stub (A-owned src/providers/stub.py): runs the kernel with no model.
   # Keep for smoke tests; safe to leave in place.
