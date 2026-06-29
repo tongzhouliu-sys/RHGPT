@@ -37,46 +37,39 @@ export const TaskTab: React.FC<TaskTabProps> = React.memo(({ onGoToChat }) => {
       {phase === "idle" && order.length === 0 && (
         <div className="mobile-card" style={{ padding: "16px" }}>
           {/* 小标题 */}
-          <div style={{ textAlign: "center", marginBottom: "14px" }}>
+          <div style={{ marginBottom: "14px", borderBottom: "2px solid var(--border)", paddingBottom: "10px" }}>
             <span style={{
-              display: "inline-block",
+              display: "block",
               fontSize: "11px",
-              fontWeight: 700,
+              fontWeight: 800,
               color: "var(--accent)",
-              background: "rgba(99,102,241,0.12)",
-              border: "1px solid rgba(99,102,241,0.25)",
-              padding: "3px 10px",
-              borderRadius: "20px",
-              marginBottom: "8px",
-              letterSpacing: "0.5px",
-            }}>⚙️ AI 多模型接力运行流程</span>
+              letterSpacing: "1px",
+              textTransform: "uppercase",
+              marginBottom: "4px",
+            }}>AI 多模型接力运行流程</span>
             <p style={{ fontSize: "12px", color: "var(--muted)", margin: 0, lineHeight: 1.4 }}>
               每个任务经历 5 轮严密的多模型协同竞速接力
             </p>
           </div>
 
           {/* 5步骤列表 */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "14px" }}>
+          <div style={{ display: "flex", flexDirection: "column", marginBottom: "14px" }}>
             {STEPS_COMPACT.map((step) => (
               <div key={step.num} style={{
                 display: "flex",
                 alignItems: "center",
                 gap: "10px",
-                padding: "8px 10px",
-                borderRadius: "10px",
-                background: `${step.color}0d`,
-                border: `1px solid ${step.color}25`,
+                padding: "10px 10px 10px 12px",
+                borderBottom: "1px solid var(--border)",
+                borderLeft: `2px solid ${step.color}`,
               }}>
-                <span style={{ fontSize: "18px", flexShrink: 0 }}>{step.icon}</span>
+                <span style={{ fontSize: "16px", flexShrink: 0, width: "20px", textAlign: "center" }}>{step.icon}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                     <span style={{
                       fontSize: "10px",
                       fontWeight: 700,
                       color: step.color,
-                      background: `${step.color}18`,
-                      padding: "1px 6px",
-                      borderRadius: "6px",
                       flexShrink: 0,
                     }}>
                       {step.num}

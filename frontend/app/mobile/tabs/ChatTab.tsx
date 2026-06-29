@@ -351,8 +351,8 @@ export const ChatTab: React.FC<ChatTabProps> = React.memo(({ onGoToTask, onGoToS
       </div>
 
       {chatHistory.length > 0 && (
-        <div className="mobile-card" style={{ marginTop: "16px" }}>
-          <h4 style={{ margin: "0 0 12px 0", fontSize: "14px", color: "var(--muted)" }}>🕒 历史记录</h4>
+        <div className="mobile-card" style={{ marginTop: "16px", borderLeft: "3px solid var(--border)" }}>
+          <h4 style={{ margin: "0 0 10px 0", fontSize: "12px", fontWeight: 700, color: "var(--muted)", letterSpacing: "0.8px", textTransform: "uppercase" }}>历史记录</h4>
           <div className="mobile-history-list">
             {chatHistory.map((item) => (
               <SwipeableHistoryItem
@@ -373,8 +373,7 @@ export const ChatTab: React.FC<ChatTabProps> = React.memo(({ onGoToTask, onGoToS
         .swipeable-history-wrapper {
           position: relative;
           overflow: hidden;
-          border-radius: 8px;
-          margin-bottom: 8px;
+          border-radius: 0;
         }
 
         .swipeable-delete-zone {
@@ -388,23 +387,24 @@ export const ChatTab: React.FC<ChatTabProps> = React.memo(({ onGoToTask, onGoToS
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 13px;
-          font-weight: 600;
+          font-size: 12px;
+          font-weight: 700;
           cursor: pointer;
-          border-radius: 0 8px 8px 0;
+          border-radius: 0;
           user-select: none;
+          letter-spacing: 0.3px;
         }
 
         .swipeable-foreground {
           position: relative;
           z-index: 1;
-          background: var(--surface, #1a1a2e);
+          background: var(--bg);
           will-change: transform;
         }
 
         .history-status-icon {
           margin-right: 6px;
-          font-size: 14px;
+          font-size: 13px;
           flex-shrink: 0;
         }
 
