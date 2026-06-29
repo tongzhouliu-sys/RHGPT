@@ -303,7 +303,7 @@ def run_pipeline(
                 conf = result.get("conf") or manager.resolve(provider_name)
         else:
             # Multi-provider race-to-first mode (首 Token 获胜锁)
-            race_state = {"winner": None, "lock": threading.Lock()}
+            race_state = {"winner": None, "finished": False, "lock": threading.Lock()}
             _first_conf = manager.resolve(provider_list[0])
             log_event(_log, "step_started", job_id=job_id, step_key=key, provider=provider_list[0], site=_first_conf.get("site"))
             push({"type": "step_started", "key": key, **_pm(provider_list[0], _first_conf)})
@@ -326,8 +326,16 @@ def run_pipeline(
                 def candidate_queue(pos: int) -> None:
                     push({"type": "step_queued", "key": key, "position": pos, **_pm(candidate_name, c_conf)})
 
+                def cand_is_cancelled() -> bool:
+                    if is_cancelled and is_cancelled():
+                        return True
+                    with race_state["lock"]:
+                        if race_state["finished"] and race_state["winner"] != candidate_name:
+                            return True
+                    return False
+
                 res = _run_step_with_retry(
-                    manager, candidate_name, prompt_text, c_conf, key, job_id=job_id, on_chunk=candidate_chunk, on_queue=candidate_queue, is_cancelled=is_cancelled
+                    manager, candidate_name, prompt_text, c_conf, key, job_id=job_id, on_chunk=candidate_chunk, on_queue=candidate_queue, is_cancelled=cand_is_cancelled
                 )
                 actual_cand_provider = res.get("provider", candidate_name)
                 actual_cand_conf = res.get("conf", c_conf)
@@ -337,15 +345,18 @@ def run_pipeline(
                             race_state["winner"] = actual_cand_provider
                             log_event(_log, "step_started", job_id=job_id, step_key=key, provider=actual_cand_provider, site=actual_cand_conf.get("site"))
                             push({"type": "step_started", "key": key, **_pm(actual_cand_provider, actual_cand_conf)})
-                        elif race_state["winner"] != actual_cand_provider:
+                        if race_state["winner"] == actual_cand_provider:
+                            race_state["finished"] = True
+                        else:
                             push({"type": "runnerup_succeeded", "key": key, "provider": actual_cand_provider, "label": actual_cand_conf.get("label", actual_cand_provider), "model": actual_cand_conf.get("model"), "content": res["content"]})
                 return {"provider": actual_cand_provider, "result": res, "conf": actual_cand_conf}
 
             from concurrent.futures import ThreadPoolExecutor, as_completed
-            with ThreadPoolExecutor(max_workers=len(provider_list)) as race_executor:
+            race_executor = ThreadPoolExecutor(max_workers=len(provider_list))
+            successful_res = None
+            first_failed = None
+            try:
                 futures = [race_executor.submit(run_candidate, p) for p in provider_list]
-                successful_res = None
-                first_failed = None
                 for future in as_completed(futures):
                     try:
                         cand = future.result()
@@ -353,10 +364,14 @@ def run_pipeline(
                             with race_state["lock"]:
                                 if successful_res is None or cand["provider"] == race_state["winner"]:
                                     successful_res = cand
+                                if race_state["finished"] and successful_res is not None:
+                                    break
                         elif first_failed is None:
                             first_failed = cand
                     except Exception:
                         pass
+            finally:
+                race_executor.shutdown(wait=False)
 
             if successful_res:
                 provider_name = successful_res["provider"]

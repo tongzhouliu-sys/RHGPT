@@ -239,6 +239,10 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       } else if (ev.type === "step_started") {
         cur.status = "running";
         cur.queuedPosition = undefined;
+        let text = cur.content || "";
+        if (text.startsWith("🔄 正在切换") || text.startsWith("⏳ 当前目标模型账号忙碌")) {
+          cur.content = "";
+        }
       } else if (ev.type === "step_chunk") {
         cur.status = "running";
         cur.queuedPosition = undefined;

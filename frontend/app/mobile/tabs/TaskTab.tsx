@@ -5,6 +5,8 @@ import { useAppJob } from "../../context/AppContext";
 import { ProgressBanner } from "../../components/shared/ProgressBanner";
 import { NodeCard } from "../../components/shared/NodeCard";
 
+import { SystemWorkflowSteps } from "../../components/shared/SystemWorkflowSteps";
+
 interface TaskTabProps {
   onGoToChat: () => void;
 }
@@ -18,13 +20,8 @@ export const TaskTab: React.FC<TaskTabProps> = React.memo(({ onGoToChat }) => {
 
   if (phase === "idle" && order.length === 0) {
     return (
-      <div className="mobile-tab-content" style={{ textAlign: "center", paddingTop: "60px" }}>
-        <div style={{ fontSize: "48px", marginBottom: "16px" }}>💬</div>
-        <h3 style={{ margin: "0 0 8px 0" }}>暂无执行中的任务</h3>
-        <p style={{ color: "var(--muted)", fontSize: "14px", marginBottom: "24px" }}>
-          在“对话”页面提交您的提问，模型将在此处展开协同接力。
-        </p>
-        <button onClick={onGoToChat}>去发起任务</button>
+      <div className="mobile-tab-content">
+        <SystemWorkflowSteps onGoToChat={onGoToChat} />
       </div>
     );
   }
