@@ -603,6 +603,56 @@ def create_app(
             })
         return result
 
+    @app.post("/admin/cleanup")
+    async def trigger_disk_cleanup(
+        request: Request,
+        x_api_key: str = Header(None),
+        x_timestamp: str = Header(None),
+        x_signature: str = Header(None),
+    ):
+        """Trigger an immediate disk cleanup (sessions + profile caches).
+
+        Signed with the same HMAC scheme as all other endpoints.
+        Returns counts of deleted sessions and cache dirs.
+        Used by the frontend 'skip queue / 插队' button when the disk is full.
+        """
+        await authenticate(request, x_api_key, x_timestamp, x_signature)
+
+        from src.cleanup import cleanup_sessions, cleanup_profile_caches
+
+        profiles_root = os.environ.get("PROFILES_ROOT", "data/profiles")
+
+        deleted_sessions: list[str] = []
+        try:
+            deleted_sessions = cleanup_sessions(sessions_root, dry_run=False)
+        except Exception as exc:  # noqa: BLE001
+            log_event(_log, "cleanup_sessions_error", level=logging.WARNING, error=str(exc))
+
+        cache_result: dict = {"caches_removed": 0, "orphans_removed": 0}
+        try:
+            cache_result = cleanup_profile_caches(
+                profiles_root,
+                providers_path,
+                include_service_worker=True,
+                delete_orphans=False,
+                dry_run=False,
+            )
+        except Exception as exc:  # noqa: BLE001
+            log_event(_log, "cleanup_profiles_error", level=logging.WARNING, error=str(exc))
+
+        log_event(
+            _log,
+            "admin_disk_cleanup",
+            sessions_deleted=len(deleted_sessions),
+            caches_removed=cache_result.get("caches_removed", 0),
+        )
+        return {
+            "status": "ok",
+            "sessions_deleted": len(deleted_sessions),
+            "caches_removed": cache_result.get("caches_removed", 0),
+            "orphans_removed": cache_result.get("orphans_removed", 0),
+        }
+
     return app
 
 

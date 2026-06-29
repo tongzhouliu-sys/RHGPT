@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useRef, useState, useCallback } from "react";
+import React, { useRef, useState, useCallback, useEffect } from "react";
 import { useAppJob, useAppSettings } from "../../context/AppContext";
 import type { ChatHistoryItem } from "../../context/AppContext";
 import AgentLogo from "../../components/AgentLogo";
+import { triggerDiskCleanup } from "../../../lib/api";
 
 interface ChatTabProps {
   onGoToTask: () => void;
@@ -152,11 +153,67 @@ export const ChatTab: React.FC<ChatTabProps> = React.memo(({ onGoToTask, onGoToS
     loadHistoryItem,
     deleteHistoryItem,
     retryHistoryItem,
+    concurrentBusy,
+    setConcurrentBusy,
   } = useAppJob();
-  const { availableModels, selectedModels } = useAppSettings();
+  const { availableModels, selectedModels, selectOnlyAPI } = useAppSettings();
 
   const running = phase === "running";
   const activeModels = availableModels.filter((m) => selectedModels.includes(m.id));
+
+  /* ── 插队倒计时 ─────────────────────────── */
+  const [skipQueued, setSkipQueued] = useState(false);   // 已点击插队
+  const [countdown, setCountdown] = useState(0);          // 剩余秒数
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // 清理倒计时
+  const clearCountdown = useCallback(() => {
+    if (countdownRef.current) {
+      clearInterval(countdownRef.current);
+      countdownRef.current = null;
+    }
+  }, []);
+
+  // 当 concurrentBusy 变回 false（任务重试后）时，重置状态
+  useEffect(() => {
+    if (!concurrentBusy) {
+      clearCountdown();
+      setSkipQueued(false);
+      setCountdown(0);
+    }
+  }, [concurrentBusy, clearCountdown]);
+
+  const handleSkipQueue = useCallback(async () => {
+    setSkipQueued(true);
+    const WAIT = 30; // 倒计时秒数
+    setCountdown(WAIT);
+
+    // 触发后端磁盘清理（即"插队"核心操作）
+    try {
+      await triggerDiskCleanup();
+    } catch {
+      // 清理失败时也继续倒计时，不阻断用户流程
+    }
+
+    // 倒计时结束后切换为 API 模型并自动重试
+    countdownRef.current = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(countdownRef.current!);
+          countdownRef.current = null;
+          // 切换到纯 API 模型并重试
+          selectOnlyAPI();
+          setConcurrentBusy(false);
+          setTimeout(() => {
+            run();
+            onGoToTask();
+          }, 100);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  }, [selectOnlyAPI, setConcurrentBusy, run, onGoToTask, clearCountdown]);
 
   const handleDelete = useCallback(
     (jobId: string) => {
@@ -195,6 +252,55 @@ export const ChatTab: React.FC<ChatTabProps> = React.memo(({ onGoToTask, onGoToS
           <span style={{ fontSize: "12px", color: "var(--accent)" }}>查看详情 ›</span>
         </div>
       )}
+
+      {/* ── 磁盘满/排队提示 ── */}
+      {concurrentBusy && (
+        <div className="mobile-queue-banner">
+          <div className="mobile-queue-banner-top">
+            <span className="mobile-queue-icon">⏳</span>
+            <div>
+              <div className="mobile-queue-title">排队人数较多</div>
+              <div className="mobile-queue-sub">
+                {skipQueued
+                  ? countdown > 0
+                    ? `正在清理磁盘，${countdown}s 后自动重试...`
+                    : "清理完成，正在为您插队重试…"
+                  : "系统正在清理磁盘空间，点击插队可优先为您重试"}
+              </div>
+            </div>
+          </div>
+
+          {!skipQueued ? (
+            <button
+              className="mobile-queue-skip-btn"
+              onClick={handleSkipQueue}
+            >
+              🚀 立即插队
+            </button>
+          ) : (
+            <div className="mobile-queue-countdown">
+              {countdown > 0 ? (
+                <>
+                  <svg className="mobile-queue-ring" viewBox="0 0 36 36">
+                    <circle cx="18" cy="18" r="15.9" fill="none" stroke="var(--surface-2, #2a2a4a)" strokeWidth="3" />
+                    <circle
+                      cx="18" cy="18" r="15.9" fill="none"
+                      stroke="var(--accent)" strokeWidth="3"
+                      strokeDasharray={`${(countdown / 30) * 100} 100`}
+                      strokeLinecap="round"
+                      transform="rotate(-90 18 18)"
+                    />
+                  </svg>
+                  <span className="mobile-queue-countdown-num">{countdown}</span>
+                </>
+              ) : (
+                <span style={{ fontSize: "20px" }}>✅</span>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
 
       <div className="mobile-card">
         <label className="field" htmlFor="mobile-q">

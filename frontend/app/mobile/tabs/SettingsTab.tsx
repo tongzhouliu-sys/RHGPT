@@ -34,7 +34,17 @@ export const SettingsTab: React.FC = React.memo(() => {
             <h2 className="welcome-modal-title">公益项目声明</h2>
             <p className="welcome-modal-body">本项目为公益项目。</p>
             <p className="welcome-modal-thanks">感谢 <strong>WUWEI</strong> 提供大模型支持！</p>
-            <p className="welcome-modal-thanks">感谢 <strong>KAISHANG</strong> 为开发过程提供指导！</p>
+            <p className="welcome-modal-thanks">感谢 <strong>KAISANG</strong> 为开发过程提供指导！</p>
+            <p className="welcome-modal-thanks" style={{ marginTop: "10px", fontSize: "13px" }}>
+              反馈邮箱：
+              <a
+                href="mailto:ceo@985.edu.kg"
+                style={{ color: "var(--accent)", textDecoration: "underline" }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                ceo@985.edu.kg
+              </a>
+            </p>
             <button className="welcome-modal-btn" onClick={dismissWelcome}>
               知道了
             </button>

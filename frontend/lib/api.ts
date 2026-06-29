@@ -244,3 +244,21 @@ export async function fetchProviders(): Promise<ProviderInfo[]> {
     return [];
   }
 }
+
+/** Trigger an immediate disk cleanup on the backend (sessions + profile caches).
+ *  Called by the "立即插队" button when the system reports disk-full / queue congestion.
+ *  Returns the counts of deleted sessions and cache directories.
+ */
+export async function triggerDiskCleanup(): Promise<{
+  status: string;
+  sessions_deleted: number;
+  caches_removed: number;
+  orphans_removed: number;
+}> {
+  const path = "/admin/cleanup";
+  const body = new Uint8Array(); // empty body for POST
+  const headers = await signedHeaders("POST", path, body);
+  const res = await fetch(API_BASE + path, { method: "POST", headers });
+  if (!res.ok) throw new Error(`Disk cleanup failed (${res.status}): ${await res.text()}`);
+  return res.json();
+}
