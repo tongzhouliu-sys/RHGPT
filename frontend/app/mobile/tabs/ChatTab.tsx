@@ -226,7 +226,7 @@ export const ChatTab: React.FC<ChatTabProps> = React.memo(({ onGoToTask, onGoToS
         <div style={{ marginTop: "16px", display: "flex", gap: "10px" }}>
           <button
             id="mobile-start-btn"
-            onClick={run}
+            onClick={() => { run(); onGoToTask(); }}
             disabled={running || !question.trim()}
             style={{ flex: 1, height: "46px" }}
           >

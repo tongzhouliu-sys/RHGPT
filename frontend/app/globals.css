@@ -1864,6 +1864,38 @@ button.ghost:hover {
   transform: translateY(0) !important;
 }
 
+/* ── Mobile copy guide tooltip (first-time) ── */
+.copy-guide-tooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  right: 0;
+  background: var(--accent);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 6px;
+  white-space: nowrap;
+  pointer-events: none;
+  animation: copyGuideIn 0.4s ease forwards;
+  z-index: 10;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.copy-guide-tooltip::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  right: 10px;
+  border: 5px solid transparent;
+  border-top-color: var(--accent);
+}
+
+@keyframes copyGuideIn {
+  0% { opacity: 0; transform: translateY(4px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
 /* ── Enable User Select for Text Copying ── */
 textarea,
 .md,

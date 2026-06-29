@@ -84,6 +84,7 @@ export const TaskTab: React.FC<TaskTabProps> = React.memo(({ onGoToChat }) => {
                   node={n}
                   open={open}
                   onToggleExpand={toggleExpand}
+                  isMobile
                 />
               );
             })}

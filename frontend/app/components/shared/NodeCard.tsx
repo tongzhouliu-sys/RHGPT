@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { renderMarkdown } from "../../../lib/markdown";
 import AgentLogo from "../AgentLogo";
 
@@ -39,12 +39,14 @@ interface NodeCardProps {
   node: NodeState;
   open: boolean;
   onToggleExpand: (key: string) => void;
+  isMobile?: boolean;
 }
 
 export const NodeCard: React.FC<NodeCardProps> = React.memo(
-  ({ nodeKey, node, open, onToggleExpand }) => {
+  ({ nodeKey, node, open, onToggleExpand, isMobile }) => {
     const n = node;
     const [copiedLane, setCopiedLane] = useState<string | null>(null);
+    const [showCopyGuide, setShowCopyGuide] = useState(false);
     const hasRunnerups = n.runnerups && Object.keys(n.runnerups).length > 0;
     const isQueued = n.status === "running" && n.queuedPosition !== undefined;
     const isWinnerTyping =
@@ -58,10 +60,24 @@ export const NodeCard: React.FC<NodeCardProps> = React.memo(
       n.content &&
       (n.content.startsWith("🔄") || n.content.startsWith("⏳"));
 
+    // First-time copy guide tooltip for mobile
+    useEffect(() => {
+      if (isMobile && n.status === "succeeded") {
+        const guided = localStorage.getItem("rh_copy_guided");
+        if (!guided) {
+          setShowCopyGuide(true);
+        }
+      }
+    }, [isMobile, n.status]);
+
     const handleCopy = (content: string, laneId: string) => {
       navigator.clipboard.writeText(content).then(() => {
         setCopiedLane(laneId);
         setTimeout(() => setCopiedLane(null), 1500);
+        if (isMobile && showCopyGuide) {
+          setShowCopyGuide(false);
+          localStorage.setItem("rh_copy_guided", "1");
+        }
       });
     };
 
@@ -79,14 +95,14 @@ export const NodeCard: React.FC<NodeCardProps> = React.memo(
               <div className="provider-tag">
                 <AgentLogo provider={n.provider} size={16} />
                 <span>{n.label || n.provider}</span>
-                {n.model && (
+                {!isMobile && n.model && (
                   <span style={{ fontSize: "10px", color: "var(--muted)", fontFamily: "var(--mono)" }}>
                     ({n.model})
                   </span>
                 )}
               </div>
             )}
-            {n.status === "succeeded" && n.provider && hasRunnerups && (
+            {!isMobile && n.status === "succeeded" && n.provider && hasRunnerups && (
               <span className="winner-crown">🏆 最快</span>
             )}
             <span className="badge">
@@ -121,12 +137,12 @@ export const NodeCard: React.FC<NodeCardProps> = React.memo(
                 <div className="race-lane-header">
                   {n.provider && <AgentLogo provider={n.provider} size={14} />}
                   <span className="winner-title">{n.label || n.provider || "模型"}</span>
-                  {n.model && (
+                  {!isMobile && n.model && (
                     <span style={{ fontSize: "10px", color: "var(--muted)", fontFamily: "var(--mono)" }}>
                       ({n.model})
                     </span>
                   )}
-                  {n.status === "succeeded" && <span className="winner-crown">🏆 最快锁定</span>}
+                  {!isMobile && n.status === "succeeded" && <span className="winner-crown">🏆 最快锁定</span>}
                   {isWinnerTyping && (
                     <div className="lane-typing-dots">
                       <span />
@@ -135,16 +151,22 @@ export const NodeCard: React.FC<NodeCardProps> = React.memo(
                     </div>
                   )}
                   {(n.status === "succeeded" || n.content) && (
-                    <button
-                      className="copy-btn"
-                      style={{ marginLeft: "auto", background: "transparent", border: "none", color: "var(--accent)", cursor: "pointer", fontSize: "12px", padding: "2px 6px", borderRadius: "4px" }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleCopy(n.content || "", "winner");
-                      }}
-                    >
-                      {copiedLane === "winner" ? "✅ 已复制" : "📋 复制"}
-                    </button>
+                    <div style={{ marginLeft: "auto", position: "relative" }}>
+                      {isMobile && showCopyGuide && (
+                        <span className="copy-guide-tooltip">点击复制内容</span>
+                      )}
+                      <button
+                        className="copy-btn"
+                        style={{ background: "transparent", border: "none", color: copiedLane === "winner" ? "var(--success)" : "var(--accent)", cursor: "pointer", fontSize: isMobile ? "16px" : "12px", padding: "2px 6px", borderRadius: "4px" }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleCopy(n.content || "", "winner");
+                        }}
+                        title="复制内容"
+                      >
+                        {copiedLane === "winner" ? "✅" : (isMobile ? "📋" : "📋 复制")}
+                      </button>
+                    </div>
                   )}
                 </div>
                 <div className="race-lane-body">
@@ -178,13 +200,14 @@ export const NodeCard: React.FC<NodeCardProps> = React.memo(
                           {(!isRTyping || rContent) && (
                             <button
                               className="copy-btn"
-                              style={{ marginLeft: "auto", background: "transparent", border: "none", color: "var(--accent)", cursor: "pointer", fontSize: "12px", padding: "2px 6px", borderRadius: "4px" }}
+                              style={{ marginLeft: "auto", background: "transparent", border: "none", color: copiedLane === laneId ? "var(--success)" : "var(--accent)", cursor: "pointer", fontSize: isMobile ? "16px" : "12px", padding: "2px 6px", borderRadius: "4px" }}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleCopy(rContent, laneId);
                               }}
+                              title="复制内容"
                             >
-                              {copiedLane === laneId ? "✅ 已复制" : "📋 复制"}
+                              {copiedLane === laneId ? "✅" : (isMobile ? "📋" : "📋 复制")}
                             </button>
                           )}
                         </div>
