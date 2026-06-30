@@ -19,8 +19,11 @@ reference, so B is unaffected.
 from __future__ import annotations
 
 import importlib
+import logging
 
 import yaml
+
+_log = logging.getLogger("rhcloud.manager")
 
 DEFAULTS = {"timeout_ms": 120000, "retries": 2, "retry_backoff_ms": 3000}
 
@@ -90,6 +93,11 @@ class ProviderManager:
                 f"Provider site '{conf['site']}' does not expose a run() function "
                 f"(contract 1 violated)"
             )
+        step_key = options.pop("_step_key", "unknown")
+        _log.info(
+            "provider_dispatch step=%s provider=%s site=%s module=%s",
+            step_key, provider_name, conf["site"], module.__name__,
+        )
         # Contract: run(profile, prompt, **options) -> str
         # Pass through model/base_url/api_key_env from providers.yaml so each
         # instance can target a different model/endpoint.

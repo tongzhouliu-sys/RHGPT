@@ -2133,4 +2133,151 @@ textarea,
   }
 }
 
+/* ── Mobile Flat Design Overrides (扁平化) ── */
+@media (max-width: 768px) {
+  /* 去除背景径向渐变，保持纯色背景 */
+  html, body {
+    background-image: none;
+  }
+
+  /* 按钮扁平化：纯色替代渐变，去除阴影与抬起动画 */
+  button {
+    background: var(--accent);
+    box-shadow: none;
+  }
+  button:hover {
+    transform: none;
+    box-shadow: none;
+    filter: brightness(1.06);
+  }
+  button:active {
+    transform: none;
+    box-shadow: none;
+  }
+  button.ghost {
+    background: transparent;
+    box-shadow: none;
+  }
+  button.ghost:hover {
+    transform: none;
+    box-shadow: none;
+  }
+
+  /* Panel / Card：去模糊去阴影 */
+  .panel {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    box-shadow: none;
+  }
+  .panel:hover {
+    box-shadow: none;
+  }
+  .card {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    box-shadow: none;
+  }
+  .card:hover {
+    box-shadow: none;
+  }
+
+  /* 工作流步骤卡片去阴影去悬浮效果 */
+  .workflow-step-card {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    box-shadow: none;
+  }
+  .workflow-step-card:hover {
+    transform: none;
+    box-shadow: none;
+  }
+
+  /* 状态指示点去辉光 */
+  .dot.run { box-shadow: none; }
+  .dot.ok  { box-shadow: none; }
+  .dot.err { box-shadow: none; }
+  .node.running::before   { box-shadow: none; }
+  .node.succeeded::before { box-shadow: none; }
+  .typing-cursor { box-shadow: none; }
+
+  /* Race lane 卡片去辉光 */
+  .race-lane-card.is-winner { box-shadow: none; }
+  .race-lane-card.is-typing { box-shadow: none; }
+  .race-lane-card.is-typing::before { box-shadow: none; }
+  .race-lane-card.is-winner::before { background: var(--accent); }
+
+  /* 模型选择器扁平化 */
+  .model-pill.active {
+    background: rgba(56, 189, 248, 0.15);
+    box-shadow: none;
+  }
+  .model-pill:hover {
+    transform: none;
+  }
+
+  /* 主题切换按钮 */
+  .theme-toggle {
+    box-shadow: none;
+  }
+  .theme-toggle:hover {
+    transform: none;
+    box-shadow: none;
+  }
+
+  /* Model Probe 栏 */
+  .probe-compact-bar {
+    box-shadow: none;
+  }
+  .probe-compact-bar:hover {
+    transform: none;
+    box-shadow: none;
+  }
+  .probe-popover {
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  /* 文本域去内嵌阴影与焦点光晕，保留边框高亮 */
+  textarea {
+    box-shadow: none;
+  }
+  textarea:focus {
+    box-shadow: none;
+  }
+
+  /* Office 场景去阴影模糊 */
+  .office-scene-container {
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+  .station-desk {
+    box-shadow: none;
+  }
+  .office-bubble {
+    box-shadow: none;
+  }
+  .office-bubble.agent-response {
+    box-shadow: none;
+  }
+
+  /* 复制按钮去阴影 */
+  .copy-btn:hover {
+    box-shadow: none !important;
+    transform: none !important;
+  }
+
+  /* 步骤过渡卡去渐变背景 */
+  .step-transition-card {
+    background: transparent;
+    border-style: solid;
+  }
+
+  /* Probe Popover 内部条目去阴影 */
+  .probe-mini-item:hover {
+    transform: none;
+  }
+}
+
 

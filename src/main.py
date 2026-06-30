@@ -411,6 +411,21 @@ def create_app(
 
         if isinstance(selected, list) and len(selected) > 0:
             import yaml
+            # Filter out test-only (site: stub) providers so they never enter
+            # a production pipeline via selected_providers.  We read the YAML
+            # directly to avoid instantiating a ProviderManager here.
+            try:
+                with open(providers_path, "r", encoding="utf-8") as _pf:
+                    _prov_defs = (yaml.safe_load(_pf) or {}).get("providers", {})
+            except Exception:
+                _prov_defs = {}
+            selected = [
+                p for p in selected
+                if _prov_defs.get(p, {}).get("site") != "stub"
+            ]
+
+        if isinstance(selected, list) and len(selected) > 0:
+            import yaml
             dyn_path = os.path.join(session_dir, "pipeline.yaml")
             steps_list = []
             for key in ["generate", "review", "deep_analyze", "improve", "summary"]:

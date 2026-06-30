@@ -130,9 +130,9 @@ def _run_step_with_retry(
             if profile:
                 lock = _lock_for(profile)  # [修正-8] serialize per profile
                 with lock:
-                    content = manager.run(active_provider, prompt, on_chunk=on_chunk)
+                    content = manager.run(active_provider, prompt, on_chunk=on_chunk, _step_key=key)
             else:
-                content = manager.run(active_provider, prompt, on_chunk=on_chunk)
+                content = manager.run(active_provider, prompt, on_chunk=on_chunk, _step_key=key)
             if content is None or content == "":
                 raise RuntimeError("provider returned empty content")
             pool.release_account(active_provider)
