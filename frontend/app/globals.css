@@ -588,6 +588,29 @@ button.ghost:hover {
   40% { opacity: 1; transform: scale(1.2); }
 }
 
+/* ── Racing Models Strip (NodeCard head, pre-winner phase) ── */
+.racing-models-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  width: 100%;
+  margin-top: 4px;
+}
+
+.racing-model-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px 2px 5px;
+  border-radius: 12px;
+  background: rgba(56, 189, 248, 0.08);
+  border: 1px solid rgba(56, 189, 248, 0.18);
+  font-size: 11px;
+  color: var(--text);
+  font-weight: 500;
+}
+
 /* ── Step Transition Card ── */
 .step-transition-card {
   display: flex;
@@ -1049,6 +1072,8 @@ button.ghost:hover {
   .card .key {
     font-size: 15px;
   }
+
+  .racing-model-pill { font-size: 10px; padding: 2px 6px 2px 4px; }
 
   .card .provider-tag {
     font-size: 11px;

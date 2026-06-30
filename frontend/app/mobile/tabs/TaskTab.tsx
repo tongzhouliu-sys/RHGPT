@@ -19,7 +19,7 @@ const STEPS_COMPACT = [
 ];
 
 export const TaskTab: React.FC<TaskTabProps> = React.memo(({ onGoToChat }) => {
-  const { phase, order, nodes, jobId, expandedKeys, toggleExpand, cancel } = useAppJob();
+  const { phase, order, nodes, jobId, expandedKeys, toggleExpand, cancel, againRound } = useAppJob();
 
   const running = phase === "running";
   const finished = phase === "done";
@@ -140,6 +140,17 @@ export const TaskTab: React.FC<TaskTabProps> = React.memo(({ onGoToChat }) => {
               );
             })}
           </div>
+
+          {finished && (
+            <div style={{ marginTop: "16px", paddingBottom: "8px" }}>
+              <button
+                onClick={() => { againRound(); onGoToChat(); }}
+                style={{ width: "100%", height: "48px", fontSize: "14px" }}
+              >
+                🔄 再来一轮接力
+              </button>
+            </div>
+          )}
         </>
       )}
     </div>

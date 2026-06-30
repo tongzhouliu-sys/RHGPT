@@ -59,6 +59,8 @@ export const NodeCard: React.FC<NodeCardProps> = React.memo(
       n.status === "running" &&
       n.content &&
       (n.content.startsWith("🔄") || n.content.startsWith("⏳"));
+    const isPreWinner = n.status === "running" && !n.provider;
+    const racingProviders = Object.entries(n.runnerupLabels || {});
 
     // First-time copy guide tooltip for mobile
     useEffect(() => {
@@ -102,12 +104,41 @@ export const NodeCard: React.FC<NodeCardProps> = React.memo(
                 )}
               </div>
             )}
+            {isPreWinner && racingProviders.length > 0 && (
+              <div className="racing-models-strip">
+                {racingProviders.map(([prov, lbl]) => (
+                  <div key={prov} className="racing-model-pill">
+                    <AgentLogo provider={prov} size={11} />
+                    <span>{lbl}</span>
+                    {n.runnerupTyping?.[prov] !== false && (
+                      <div className="lane-typing-dots" style={{ gap: "2px" }}>
+                        <span style={{ width: "4px", height: "4px" }} />
+                        <span style={{ width: "4px", height: "4px" }} />
+                        <span style={{ width: "4px", height: "4px" }} />
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+            {isPreWinner && racingProviders.length === 0 && (
+              <div className="racing-models-strip">
+                <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "11px", color: "var(--accent)" }}>
+                  <div className="lane-typing-dots">
+                    <span /><span /><span />
+                  </div>
+                  竞速启动中...
+                </span>
+              </div>
+            )}
             {!isMobile && n.status === "succeeded" && n.provider && hasRunnerups && (
               <span className="winner-crown">🏆 最快</span>
             )}
             <span className="badge">
               {isQueued
                 ? `⏳ 排队中 (${n.queuedPosition}位)`
+                : isPreWinner
+                ? "⚡ 竞速中"
                 : n.status === "running" && isWinnerTyping
                 ? "打字中..."
                 : BADGE[n.status]}
