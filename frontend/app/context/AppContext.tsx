@@ -33,10 +33,28 @@ export const PIPELINES = [
 ];
 
 const FALLBACK_MODELS: ProviderInfo[] = [
-  { id: "openai_api_1", site: "openai_api", label: "GPT-4o Mini", model: "gpt-4o-mini", api: true },
   { id: "gemini_api_1", site: "gemini_api", label: "Gemini 2.5 Flash", model: "gemini-2.5-flash", api: true },
-  { id: "anthropic_api_1", site: "anthropic_api", label: "Claude 3.5 Sonnet", model: "claude-3-5-sonnet-20241022", api: true },
   { id: "qwen_api_1", site: "qwen_api", label: "Qwen Plus", model: "qwen-plus", api: true },
+  // 京东云 (OpenAI Compatible)
+  { id: "jdcloud_deepseek_v3_2", site: "openai_api", label: "DeepSeek-V3.2", model: "DeepSeek-V3.2", api: true },
+  { id: "jdcloud_glm_5", site: "openai_api", label: "GLM-5", model: "GLM-5", api: true },
+  { id: "jdcloud_glm_4_7", site: "openai_api", label: "GLM-4.7", model: "GLM-4.7", api: true },
+  { id: "jdcloud_minimax_m2_5", site: "openai_api", label: "MiniMax-M2.5", model: "MiniMax-M2.5", api: true },
+  { id: "jdcloud_kimi_k2_5", site: "openai_api", label: "Kimi-K2.5", model: "Kimi-K2.5", api: true },
+  { id: "jdcloud_kimi_k2_turbo", site: "openai_api", label: "Kimi-K2-Turbo", model: "Kimi-K2-Turbo", api: true },
+  { id: "jdcloud_qwen3_coder", site: "openai_api", label: "Qwen3-Coder", model: "Qwen3-Coder", api: true },
+  // 阿里云 (Anthropic Compatible)
+  { id: "aliyun_qwen3_7_plus", site: "anthropic_api", label: "qwen3.7-plus", model: "qwen3.7-plus", api: true },
+  { id: "aliyun_qwen3_6_plus", site: "anthropic_api", label: "qwen3.6-plus", model: "qwen3.6-plus", api: true },
+  { id: "aliyun_qwen3_5_plus", site: "anthropic_api", label: "qwen3.5-plus", model: "qwen3.5-plus", api: true },
+  { id: "aliyun_qwen3_max_20260123", site: "anthropic_api", label: "qwen3-max-2026-01-23", model: "qwen3-max-2026-01-23", api: true },
+  { id: "aliyun_qwen3_coder_next", site: "anthropic_api", label: "qwen3-coder-next", model: "qwen3-coder-next", api: true },
+  { id: "aliyun_qwen3_coder_plus", site: "anthropic_api", label: "qwen3-coder-plus", model: "qwen3-coder-plus", api: true },
+  { id: "aliyun_glm_5", site: "anthropic_api", label: "glm-5", model: "glm-5", api: true },
+  { id: "aliyun_glm_4_7", site: "anthropic_api", label: "glm-4.7", model: "glm-4.7", api: true },
+  { id: "aliyun_kimi_k2_5", site: "anthropic_api", label: "kimi-k2.5", model: "kimi-k2.5", api: true },
+  { id: "aliyun_minimax_m2_5", site: "anthropic_api", label: "MiniMax-M2.5", model: "MiniMax-M2.5", api: true },
+  // Web providers
   { id: "chatgpt_web_1", site: "chatgpt", label: "ChatGPT Web", model: null, api: false },
   { id: "claude_web_1", site: "claude", label: "Claude Web", model: null, api: false },
   { id: "kimi_web_1", site: "kimi", label: "Kimi Web", model: null, api: false },

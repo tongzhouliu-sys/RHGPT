@@ -62,17 +62,109 @@ providers:
     model: qwen-plus
     label: "Qwen Plus"
 
-  openai_api_1:
+  # --- 京东云 (OpenAI Compatible) -------------------------------------------
+  jdcloud_deepseek_v3_2:
     site: openai_api
     profile: ""
-    model: gpt-4o-mini
-    label: "GPT-4o Mini"
+    model: DeepSeek-V3.2
+    label: "DeepSeek-V3.2"
 
-  anthropic_api_1:
+  jdcloud_glm_5:
+    site: openai_api
+    profile: ""
+    model: GLM-5
+    label: "GLM-5"
+
+  jdcloud_glm_4_7:
+    site: openai_api
+    profile: ""
+    model: GLM-4.7
+    label: "GLM-4.7"
+
+  jdcloud_minimax_m2_5:
+    site: openai_api
+    profile: ""
+    model: MiniMax-M2.5
+    label: "MiniMax-M2.5"
+
+  jdcloud_kimi_k2_5:
+    site: openai_api
+    profile: ""
+    model: Kimi-K2.5
+    label: "Kimi-K2.5"
+
+  jdcloud_kimi_k2_turbo:
+    site: openai_api
+    profile: ""
+    model: Kimi-K2-Turbo
+    label: "Kimi-K2-Turbo"
+
+  jdcloud_qwen3_coder:
+    site: openai_api
+    profile: ""
+    model: Qwen3-Coder
+    label: "Qwen3-Coder"
+
+  # --- 阿里云 (Anthropic Compatible) ----------------------------------------
+  aliyun_qwen3_7_plus:
     site: anthropic_api
     profile: ""
-    model: claude-3-5-sonnet-20241022
-    label: "Claude 3.5 Sonnet"
+    model: qwen3.7-plus
+    label: "qwen3.7-plus"
+
+  aliyun_qwen3_6_plus:
+    site: anthropic_api
+    profile: ""
+    model: qwen3.6-plus
+    label: "qwen3.6-plus"
+
+  aliyun_qwen3_5_plus:
+    site: anthropic_api
+    profile: ""
+    model: qwen3.5-plus
+    label: "qwen3.5-plus"
+
+  aliyun_qwen3_max_20260123:
+    site: anthropic_api
+    profile: ""
+    model: qwen3-max-2026-01-23
+    label: "qwen3-max-2026-01-23"
+
+  aliyun_qwen3_coder_next:
+    site: anthropic_api
+    profile: ""
+    model: qwen3-coder-next
+    label: "qwen3-coder-next"
+
+  aliyun_qwen3_coder_plus:
+    site: anthropic_api
+    profile: ""
+    model: qwen3-coder-plus
+    label: "qwen3-coder-plus"
+
+  aliyun_glm_5:
+    site: anthropic_api
+    profile: ""
+    model: glm-5
+    label: "glm-5"
+
+  aliyun_glm_4_7:
+    site: anthropic_api
+    profile: ""
+    model: glm-4.7
+    label: "glm-4.7"
+
+  aliyun_kimi_k2_5:
+    site: anthropic_api
+    profile: ""
+    model: kimi-k2.5
+    label: "kimi-k2.5"
+
+  aliyun_minimax_m2_5:
+    site: anthropic_api
+    profile: ""
+    model: MiniMax-M2.5
+    label: "MiniMax-M2.5"
 
   # --- M1 stub (A-owned src/providers/stub.py): runs the kernel with no model.
   # Keep for smoke tests; safe to leave in place.
