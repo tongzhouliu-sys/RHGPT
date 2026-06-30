@@ -6,32 +6,32 @@ steps:
   - key: generate
     providers:
       - gemini_api_1
-      - openai_api_1
-      - anthropic_api_1
+      - jdcloud_deepseek_v3_2
+      - aliyun_qwen3_7_plus
       - chatgpt_web_1
       - kimi_web_1
     prompt: generate
   - key: review
     providers:
       - gemini_api_1
-      - openai_api_1
-      - anthropic_api_1
+      - jdcloud_deepseek_v3_2
+      - aliyun_qwen3_7_plus
     prompt: review
   - key: deep_analyze
     providers:
       - gemini_api_1
-      - openai_api_1
+      - jdcloud_deepseek_v3_2
       - claude_web_1
     prompt: deep_analyze
   - key: improve
     providers:
       - gemini_api_1
-      - openai_api_1
+      - jdcloud_deepseek_v3_2
       - chatgpt_web_1
     prompt: improve
   - key: summary
     providers:
       - gemini_api_1
-      - openai_api_1
-      - anthropic_api_1
+      - jdcloud_deepseek_v3_2
+      - aliyun_qwen3_7_plus
     prompt: summary
